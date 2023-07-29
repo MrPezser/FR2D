@@ -1,0 +1,7 @@
+# ninja log v5
+29	114	7121868308435820	CMakeFiles/FR2D.dir/SailorMath.cpp.obj	23517a3a03817be4
+9	561	7121868312866070	CMakeFiles/FR2D.dir/EulerFlux.cpp.obj	e6b0b2ba795b27ed
+21	580	7121868313061065	CMakeFiles/FR2D.dir/SpatialDiscretization.cpp.obj	838a16fee177bef4
+0	695	7121868314206270	CMakeFiles/FR2D.dir/main.cpp.obj	17cc0fa432b77045
+15	742	7121868314685847	CMakeFiles/FR2D.dir/basis.cpp.obj	e67361638f2de70b
+742	899	7121868316188619	FR2D.exe	4957060b1ce4228
