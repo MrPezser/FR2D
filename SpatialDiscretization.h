@@ -14,6 +14,7 @@
 #ifndef FR1D_SPATIALDISCRETIZATION_H
 #define FR1D_SPATIALDISCRETIZATION_H
 
-void CalcDudt(int nx, int ndegr, int nvar, double a, double dx, const double* u, const double* Dmatrix, const double* Dradau, double* dudt );
-
+void CalcDudt(int nelem, int ndegr, int nface, int nvar, double dx,\
+              const int* inelfa, const int* facpts, const double* u, const double* Dmatrix, const double* Dradau,\
+              double* dudt );
 #endif //FR1D_SPATIALDISCRETIZATION_H

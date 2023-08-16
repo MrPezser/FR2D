@@ -5,6 +5,7 @@
 #include "basis.h"
 #include "EulerFlux.h"
 #include "SpatialDiscretization.h"
+#include "Setup2D.h"
 
 
 
@@ -61,11 +62,12 @@ void InitializeEuler(double x, double y, double* u){
 
 int main() {
     ///hardcoded inputs
-    int    nx = 25;            //Number of elements, nx+1 points
-    int    ny = 25;
-    int nelem = nx * ny;
-    double dx = 1.0 / nx;      //Implied domain from x=0 to x=1
-    double dy = 1.0 / ny;
+    //Input grid informaiton
+    int imx = 10;
+    int jmx = 10;
+    int nelem = (imx-1) * (jmx-1);
+    int nface = (2*nelem + (imx-1) + (jmx-1));
+    int npoin = imx*jmx;
 
     int ndegr = 4;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
@@ -76,12 +78,6 @@ int main() {
     double a = 1.0;             //Wave Speed
 
     double tmax = 0.2;
-
-    //This should be recalculated each time step
-    double dt = (cfl * fmin(dx, dy)) / a;
-
-    //Aprox number of iterations required to get to the given tmax
-    int niter = ceil(tmax/dt);
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -96,17 +92,48 @@ int main() {
     auto* Dradau = (double*)malloc((1+ndegr)*sizeof(double));
     GenerateRadauDerivatives(ndegr, xi, Dradau);
 
-    //Create array for the location of degrees of freedom in quadrilateral cell might speed up computation
+
+    //Setup for 2D based on a structured Quad grid (structure input, processing done unstructred)
+    int *inpoel, *inpofa, *inelfa;
+    LoadStruct2Unstruct(imx, jmx, nelem, nface, &inpoel, &inpofa, &inelfa);
+
+    //test grid
+    double dx = 1.0 / (double)imx;
+    double dy = 1.0 / (double)jmx;
+
+    auto* x = (double*)malloc(npoin*sizeof(double));
+    auto* y = (double*)malloc(npoin*sizeof(double));
+    for (int j = 0; j < jmx; j++) {
+        for (int i = 0; i < imx; i++) {
+            int ipoin = iu(i,j,imx);
+            //defining x & y position of cell corners
+            x[ipoin] = i * dx;
+            y[ipoin] = j * dy;
+        }
+    }
+
+    double* eldrdxi;
+    CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi);
+
+    int* facpts;
+    FacePoint2PointMap(ndegr,facpts);
+
+    //This should be recalculated each time step
+    double dt = (cfl * fmin(dx, dy)); ///Remember to do this
+
+    //Aprox number of iterations required to get to the given tmax
+    int niter = ceil(tmax/dt);
 
     //Allocate Arrays
-    auto* x = (double*)malloc(nx*sizeof(double));
-    auto* y = (double*)malloc(ny*sizeof(double));
     auto* u = (double*)malloc(nu*sizeof(double));
     auto* u0 = (double*)malloc(nu*sizeof(double));
     auto* dudt = (double*)malloc(nu*sizeof(double));
 
 
     //Generate Grid (currently uniform 2D) & initialize solution
+    double dx = 1.0 / (double)imx;
+    double dy = 1.0 / (double)jmx;
+
     for (int i=0; i<nelem; i++){
         for (int j=0; j<ndegr; j++) {
             for (int k=0; k<ndegr; k++) {
@@ -114,7 +141,7 @@ int main() {
                 x[k] = (k+0.5) * dx;
                 y[j] = (j+0.5) * dy;
 
-                int jnode = iup(k,j,ndegr);
+                int jnode = iu(k,j,ndegr);
                 InitializeEuler(x[k] + xi[k] * (0.5 * dx), y[j] + xi[j] * (0.5 * dx), &u[iu3(i, jnode, 0, tdegr)]);
             }
         }
@@ -128,7 +155,7 @@ int main() {
     for (int iter=0; iter<niter; iter++){
         veccopy(u_tmp, u, nu);
         //1st stage
-        CalcDudt(nelem, ndegr, nvar, a, dx, u, Dmatrix, Dradau, dudt);
+        CalcDudt(nelem, ndegr, nface, nvar, dx, inelfa, facpts, u, Dmatrix, Dradau, dudt );
         for (int i=0; i<nu; i++){
             //u_tmp[i] += dt * dudt[i];
             u[i] += dt * dudt[i];

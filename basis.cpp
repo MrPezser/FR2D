@@ -150,7 +150,7 @@ void GenerateLagrangeDMatrix( int ndegr, const double* loPoints, double* Dmatrix
     for (int i=0; i<ndegr; i++){
         for (int j=0; j<ndegr; j++){
             //cry
-            Dmatrix[iup(i,j, ndegr)] = LagrangeDerivative(i,j,ndegr, loPoints);
+            Dmatrix[iu(i,j, ndegr)] = LagrangeDerivative(i,j,ndegr, loPoints);
         }
     }
 }

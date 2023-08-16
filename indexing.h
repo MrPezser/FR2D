@@ -9,8 +9,8 @@
 
 //indexing into state variable array u of degree nj for the jth node on the ith element
 //column major i guess, maybe not
-#define iu(j, i, ni)  (((j)*(ni)) + (i))
-#define NVAR 3
+#define iu(i, j, ni)  (((j)*(ni)) + (i))
+#define NVAR 4
 #define iu3(ielem, jdegr, kvar, ndegr) ((((ielem)*(ndegr)) + (jdegr))*NVAR + (kvar))
 
 #endif //FR1D_INDEXING_H

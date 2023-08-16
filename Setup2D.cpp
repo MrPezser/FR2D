@@ -1,7 +1,6 @@
 #include "Setup2D.h"
 
-void LoadStruct2Unstruct(const int imx, const int jmx,
-                         int nelem, int nface,
+void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
                          int** inpoel, int** inpofa, int** inelfa) {
     /*Processes given structured grid points and outputs unstructured data format
      * Inputs:
@@ -12,11 +11,10 @@ void LoadStruct2Unstruct(const int imx, const int jmx,
      * nface - number of faces
      * inpoel- interconnectivity points from elements
      * inpofa- interconnectivity points from faces
+     * inelfa- interconnectivity elements from faces
     */
 
     int npoin = imx*jmx;
-    nelem = (imx-1) * (jmx-1);
-    nface = (2*nelem + (imx-1) + (jmx-1));
 
     //
     *inpoel = (int*)malloc(4*nelem*sizeof(int));
@@ -46,6 +44,7 @@ void LoadStruct2Unstruct(const int imx, const int jmx,
             (*inpofa)[iu(iface,1,nface)] = iu(i,j+1,imx);    //Top Lef
             (*inelfa)[iu(iface,0,nface)] = ielem-1;    //elem left
             (*inelfa)[iu(iface,1,nface)] = ielem;      //elem right
+            (*inelfa)[iu(iface,2,nface)] = 0; //Vertical face
             if (i==0){ //boundary
                 (*inelfa)[iu(iface,0,nface)] = -1;
             }
@@ -56,6 +55,7 @@ void LoadStruct2Unstruct(const int imx, const int jmx,
             (*inpofa)[iu(iface,1,nface)] = iu(i+1,j,imx);     //Bot Rig
             (*inelfa)[iu(iface,0,nface)] = ielem;              //elem left of face
             (*inelfa)[iu(iface,1,nface)] = ielem - (imx-1);    //elem right of face
+            (*inelfa)[iu(iface,2,nface)] = 1; //Horizontal face
             if (j==0){ //boundary
                 (*inelfa)[iu(iface,1,nface)] = -1;
             }
@@ -64,15 +64,19 @@ void LoadStruct2Unstruct(const int imx, const int jmx,
                 iface = 2*nelem + 1 + j;
                 (*inpofa)[iu(iface,0,nface)] = iu(i+1,j  ,imx);    //Bot Rig
                 (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);    //Top Rig
+
                 (*inelfa)[iu(iface,0,nface)] = -1;     //elem left of face
                 (*inelfa)[iu(iface,1,nface)] = ielem;  //elem right of face
+                (*inelfa)[iu(iface,2,nface)] = 0; //Vertical face
             }
             if (j==jmx-2){ //very far top
+                iface = 2*nelem + 1 + jmx-1 + i;
                 (*inpofa)[iu(iface,0,nface)] = iu(i  ,j+1,imx);     //Top Lef
                 (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);     //Top Rig
-                iface = 2*nelem + 1 + jmx-1 + i;
+
                 (*inelfa)[iu(iface,0,nface)] = ielem; //elem left of face
                 (*inelfa)[iu(iface,1,nface)] = -1;    //elem right of face
+                (*inelfa)[iu(iface,2,nface)] =  1; //Horizontal face
             }
 
 
@@ -80,7 +84,8 @@ void LoadStruct2Unstruct(const int imx, const int jmx,
     }
 }
 
-void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const double* coords, const double* xi, const double* eta, double* eldrdxi){
+void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const double* x_in, const double* y_in,\
+                       const double* xi, const double* eta, double* eldrdxi){
     /*Calculates the coordinate transformation matrix d(x,y)/d(xi,eta) for each column and row in each quad element
      *Input:
      *  ndegr  - degrees of freedom per dimension of the cell
@@ -108,8 +113,8 @@ void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const
         //Get the coordinates of each corner point
         for (int icrnr = 0; icrnr<4; icrnr++) {
             ipoin = inpoel[iu(ielem, icrnr, nelem)];
-            x[icrnr] = coords[iu(ipoin, 0, npoin)];
-            y[icrnr] = coords[iu(ipoin, 1, npoin)];
+            x[icrnr] = x_in[ipoin];
+            y[icrnr] = y_in[ipoin];
         }
 
         //Interpolate along the edges of the quadrilateral to find the endpoints for the constant xi/eta slices
@@ -143,12 +148,12 @@ void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const
             double dydeta = (etamax_y - etamin_y) / 2.0;
 
             //xi derivatives
-            int ind = 2 * iu(ielem, islice + 0    , 2*ndegr);
+            int ind = 2 * iu(ielem, islice + 0    , nelem);
             eldrdxi[ind + 0] = dxdxi;
             eldrdxi[ind + 1] = dydxi;
 
             //eta derivatives
-            ind     = 2 * iu(ielem, islice + ndegr, 2*ndegr);
+            ind     = 2 * iu(ielem, islice + ndegr, nelem);
             eldrdxi[ind + 0] = dxdeta;
             eldrdxi[ind + 1] = dydeta;
         }
@@ -156,21 +161,36 @@ void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const
 
 }
 
-void FacePoint2PointMap(int ndegr, double* facpts) {
+void FacePoint2PointMap(int ndegr, int* facpts) {
     /*
      *      Records the indexing for points on the left and right of a given face assuming 1-to-1 2D quads
      */
 
     //Points indexed; ipoin = iu(i_xi, j_eta, ni)
-    for (int i=0; i<ndegr; i++){
-        //Vertical, L = up = bot of cell, R = vis versa
-        facpts[iu(i, 0, ndegr)] = iu(i,0      , ndegr); //L
-        facpts[iu(i, 1, ndegr)] = iu(i,ndegr-1, ndegr); //R
+    //Need interior points perpendicular from the face points
 
-        //Horizontal, L = left = right of cell, R = vis versa
-        facpts[iu(i, 2, ndegr)] = iu(ndegr-1, i, ndegr); //L
-        facpts[iu(i, 3, ndegr)] = iu(0      , i, ndegr); //R
+    for (int i=0; i<ndegr; i++){
+
+        int id  = ndegr * iu(i, 0, ndegr);
+        int id2 = ndegr * iu(i, 1, ndegr);
+        int id3 = ndegr * iu(i, 2, ndegr);
+        int id4 = ndegr * iu(i, 3, ndegr);
+        for (int j=0; j<ndegr; j++){
+            //j=0 = xi_max set of points which will lie on the left side of the face
+            //j++ incrementing towards the interior until arriving at the other face
+
+            //Vertical Face
+            //Left
+            facpts[id +j] = iu(ndegr-1-j, i, ndegr); // Left side of vertical face
+            //Right
+            facpts[id2+j] = iu(j        , i, ndegr); // Right side of vertical face
+
+            //Horizontal Face
+            //Left|Top
+            facpts[id3+j] = iu(i, j        , ndegr);    // Left|Top  side of vertical face
+            //Right|Upper
+            facpts[id4+j] = iu(i, ndegr-1-j, ndegr);    // Right|Bot side of vertical face
+        }
 
     }
-
 }

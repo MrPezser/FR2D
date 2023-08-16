@@ -9,26 +9,28 @@
 
 using namespace std;
 
-void getPrimativesPN(const double gam, const double *unkel, double *rho, double *v, double *p, double *c, double *M) {
+void getPrimativesPN(const double gam, const double *unkel, double *rho, double *vx, double *vy, double *p,\
+                     double *c, double *M) {
     // Gets the primative variables at a specific node
-    rho[0]       = unkel[0];
-    double rhov  = unkel[1];
-    double rhoe  = unkel[2];
+    rho[0]        = unkel[0];
+    double rhovx  = unkel[1];
+    double rhovy  = unkel[2];
+    double rhoe   = unkel[3];
 
     //Density Limiter
     //rho[0] = fmax(1e-8, rho[0]);
 
     //break down into primatives
-    v[0] = rhov / rho[0];
-    double v2 = v[0]*v[0];
-
-    p[0] = (gam - 1) * (rhoe - (0.5 * rhov * v[0]));
+    vx[0] = rhovx / rho[0];
+    vy[0] = rhovy / rho[0];
+    double v2 = (vx[0]*vx[0]) + (vy[0]*vy[0]);
+    p[0] = (gam - 1) * (rhoe - 0.5 * rho[0] * v2);
 
     //Pressure Limit
     p[0] = fmax(1e-8, p[0]);
 
     c[0] = sqrt(gam * p[0] / fmax(1e-8, rho[0]));
-    M[0] = v[0] / c[0];
+    M[0] = sqrt(v2) / c[0]; ///=========== might need to sign this??? ================= (maybe not)
 
     if (isnan(M[0])) {throw overflow_error("Nonpositive Density\n");}
 }
@@ -48,7 +50,7 @@ void EulerFlux(double gam, const double *u, double* flux){
 }
 
 void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
-
+    /// NOT UPDATED FOR 2D
     double rhoL, vL, pL, cL, ML;
     getPrimativesPN(gam, uL, &rhoL, &vL, &pL, &cL, &ML);
     double hL = (uL[2] + pL) / uL[0];
@@ -159,32 +161,25 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(double gam, const double* uL, const double* uR, double *flux){
-    double F1L, F1R, fPlus[3], fMins[3];
+void LeerFlux(double gam, const double* uL, const double* uR, double* nvec, double *flux){
+    double F1L, F1R, fPlus[4], fMins[4];
 
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
+    flux[4] = 0.0;
 
-    double rhoL, vL, pL, cL, ML;
-    getPrimativesPN(gam, uL, &rhoL, &vL, &pL, &cL, &ML);
+    double rhoL, vxL, vyL, pL, cL, ML;
+    getPrimativesPN(gam, uL, &rhoL, &vxL, &vyL, &pL, &cL, &ML);
 
-    double rhoR, vR, pR, cR, MR;
-    getPrimativesPN(gam, uR, &rhoR, &vR, &pR, &cR, &MR);
+    double rhoR, vxR, vyR, pR, cR, MR;
+    getPrimativesPN(gam, uR, &rhoR, &vxR, &vyR, &pR, &cR, &MR);
+
+    ///Find normal Mach Number, Mn
 
 
-    if (ML >= 1.0){
-        EulerFlux(gam, uL, flux);
-        return;
-    }
-
-    if (MR <= -1.0){
-        EulerFlux(gam, uR, flux);
-        return;
-    }
-
-    F1L = F1pm(1, ML, rhoL, cL);
-    F1R = F1pm(0, MR, rhoR, cR);
+    F1L = F1pm(1, MnL, rhoL, cL);
+    F1R = F1pm(0, MnR, rhoR, cR);
 
     if(isnan(F1L+F1R)){
         throw overflow_error("getting NAN mass flux!");
@@ -200,6 +195,7 @@ void LeerFlux(double gam, const double* uL, const double* uR, double *flux){
     A = -((gam - 1) * vL) - (2.0 * cR); //vR
     fMins[1] = F1R * A / gam;
     fMins[2] = F1R * A*A * 0.5 / (gam*gam - 1.0);
+
 
     flux[0] = fPlus[0] + fMins[0];
     flux[1] = fPlus[1] + fMins[1];
