@@ -35,18 +35,28 @@ void getPrimativesPN(const double gam, const double *unkel, double *rho, double 
     if (isnan(M[0])) {throw overflow_error("Nonpositive Density\n");}
 }
 
-void EulerFlux(double gam, const double *u, double* flux){
+void EulerFlux(const int dim, const double gam, const double *u, double* flux){
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
+    flux[3] = 0.0;
 
-    double rho, v, p, c, M;
-    getPrimativesPN(gam, u, &rho, &v, &p, &c, &M);
+    double rho, vx, vy, p, c, M;
+    getPrimativesPN(gam, u, &rho, &vx, &vy, &p, &c, &M);
 
-    flux[0] = u[1];
-    flux[1] = (u[1]*v) + p;
-    flux[2] = v * (u[2] + p);
-
+    if (dim == 0) {
+        //X flux component
+        flux[0] = u[1];
+        flux[1] = (u[1] * vx) + p;
+        flux[2] = (u[1] * vy);
+        flux[3] = vx * (u[3] + p);
+    } else {
+        // Y flux component
+        flux[0] = u[2];
+        flux[1] = (u[2] * vx);
+        flux[2] = (u[2] * vy) + p;
+        flux[3] = vx * (u[3] + p);
+    }
 }
 
 void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
@@ -161,22 +171,36 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(double gam, const double* uL, const double* uR, double* nvec, double *flux){
-    double F1L, F1R, fPlus[4], fMins[4];
+void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, double *flux){
+    /*
+     * gam - ratio of specific heats
+     * uL - Left state variables
+     * uR - Right state variables
+     * nvec - flux direction (0=x+, 1=y+)
+     * flux - output common flux in the given direction
+     */
+    double F1L, F1R, fPlus[4], fMins[4], nx, ny;
+    double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL;
+    double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR;
+
+    nx = (1.0 - (double)nvec);
+    ny = (double)nvec;
 
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
     flux[4] = 0.0;
 
-    double rhoL, vxL, vyL, pL, cL, ML;
     getPrimativesPN(gam, uL, &rhoL, &vxL, &vyL, &pL, &cL, &ML);
-
-    double rhoR, vxR, vyR, pR, cR, MR;
     getPrimativesPN(gam, uR, &rhoR, &vxR, &vyR, &pR, &cR, &MR);
 
-    ///Find normal Mach Number, Mn
+    ///Find normal Mach Number, Mn, and pressure direction
 
+    vnL = nx*vxL + ny*vyL;
+    MnL = vnL / cL;
+
+    vnR = nx*vxR + ny*vyR;
+    MnR = vnR / cR;
 
     F1L = F1pm(1, MnL, rhoL, cL);
     F1R = F1pm(0, MnR, rhoR, cR);
@@ -185,10 +209,27 @@ void LeerFlux(double gam, const double* uL, const double* uR, double* nvec, doub
         throw overflow_error("getting NAN mass flux!");
     }
 
-    fPlus[0] = F1L;
+    //Compute the positive fluxes (left of face)
+    if (MnL > 1.0) {
+        fPlus[0] = rhoL*vnL;
+        fPlus[1] = rhoL*vnL*vxL + pL*nx;
+        fPlus[2] = rhoL*vnL*vxL + pL*ny;
+        fPlus[3] = vnL*(uL[3] + pL);
+    } else if (MnL < -1.0 ){
+        fPlus[0] = 0;
+        fPlus[1] = 0;
+        fPlus[2] = 0;
+        fPlus[3] = 0;
+    } else {
+        fPlus[0] = F1L;
+        fPlus[1] = F1L * (vxL + nx*(2*cL-vnL)/gam);
+        fPlus[2] = F1L * (vyL + ny*(2*cL-vnL)/gam);
+        fPlus[3] = F1L * ()
+    }
+
     double A = ((gam - 1) * vL) + (2.0 * cL); //vL
     fPlus[1] = F1L * A / gam;
-    fPlus[2] = F1L * A*A * 0.5 / (gam*gam - 1.0);
+    fPlus[2] = F1L * A * A * 0.5 / (gam * gam - 1.0);
 
 
     fMins[0] = F1R;
