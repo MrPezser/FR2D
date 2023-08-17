@@ -171,7 +171,7 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, double *flux){
+void LeerFlux(const double gam, const double* uL, const double* uR, const int nvec, double *flux){
     /*
      * gam - ratio of specific heats
      * uL - Left state variables
@@ -224,21 +224,32 @@ void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, do
         fPlus[0] = F1L;
         fPlus[1] = F1L * (vxL + nx*(2*cL-vnL)/gam);
         fPlus[2] = F1L * (vyL + ny*(2*cL-vnL)/gam);
-        fPlus[3] = F1L * ()
+        double A = ((gam-1) * vnL) + 2*cL;
+        fPlus[3] = F1L * ( 0.5*(vxL*vxL + vyL*vyL - vnL*vnL) + A*A*0.5/(gam*gam - 1.0)) ;
     }
 
-    double A = ((gam - 1) * vL) + (2.0 * cL); //vL
-    fPlus[1] = F1L * A / gam;
-    fPlus[2] = F1L * A * A * 0.5 / (gam * gam - 1.0);
-
-
-    fMins[0] = F1R;
-    A = -((gam - 1) * vL) - (2.0 * cR); //vR
-    fMins[1] = F1R * A / gam;
-    fMins[2] = F1R * A*A * 0.5 / (gam*gam - 1.0);
+    //Compute the negative fluxes (right of face)
+    if (MnR > 1.0) {
+        fMins[0] = 0;
+        fMins[1] = 0;
+        fMins[2] = 0;
+        fMins[3] = 0;
+    } else if (MnR < -1.0 ){
+        fMins[0] = rhoR*vnR;
+        fMins[1] = rhoR*vnR*vxR + pR*nx;
+        fMins[2] = rhoR*vnR*vxR + pR*ny;
+        fMins[3] = vnR*(uR[3] + pR);
+    } else {
+        fMins[0] = F1R;
+        fMins[1] = F1R * (vxR + nx*(-2*cR-vnR)/gam);
+        fMins[2] = F1R * (vyR + ny*(-2*cR-vnR)/gam);
+        double A = ((gam-1) * vnR) - 2*cL;
+        fMins[3] = F1R * ( 0.5*(vxR*vxR + vyR*vyR - vnR*vnR) + A*A*0.5/(gam*gam - 1.0)) ;
+    }
 
 
     flux[0] = fPlus[0] + fMins[0];
     flux[1] = fPlus[1] + fMins[1];
     flux[2] = fPlus[2] + fMins[2];
+    flux[3] = fPlus[3] + fMins[3];
 }

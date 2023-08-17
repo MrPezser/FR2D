@@ -7,51 +7,61 @@
 
 #define MU (5e-4)
 
-void FluxFaceCorrection(const int nface, const int ndegr, const int nvar,\
+void FluxFaceCorrection(const int nface, const int ndegr,\
                         const double* u, const double* Dradau, const int* inelfa, const int* facpts,\
                         double* fcorr_xi){
     ///Vertical and horizontal need to be separated into f anf g
     /*
-     * Calculates the contribution of the face discontinuities to the flux slope
+     * Calculates the contribution of the face discontinuities to the flux slope (i.e. the correction term)
      */
 
-    double fL[nvar], fR[nvar], common_flux[nvar];
+    double fL[NVAR], fR[NVAR], f_comm[NVAR], g_comm[NVAR], flux_comm_L[NVAR], flux_comm_R[NVAR];
 
-    //Compute face contributions to the corrected flux gradient
     for (int iface=0; iface<nface; iface++){
-        int Lelem, Relem, Lpoin, Rpoin, id, id2;
+        int Lelem, Relem, Lpoin, Rpoin, Lid, Rid;
         Lelem = inelfa[iu(iface,0,nface)];
         Relem = inelfa[iu(iface,1,nface)];
 
-        //Neumann-0 boundary conditions
-        if (Lelem == -1) Lelem = Relem;
-        if (Relem == -1) Relem = Lelem;
+        //Neumann=0 boundary conditions
+        int bcSide; //says which side of face is boundary
+        if (Lelem < 0) {
+            Lelem = Relem;
+            bcSide = -1;
+        }
+        if (Relem < 0) {
+            Relem = Lelem;
+            bcSide = 1;
+        }
 
         if (Relem) throw "somthang messed up";
 
 
         int facori = inelfa[iu(iface,2,nface)]; //Face Orientation
+        int offset;
 
         //Loop over the fact points
         for (int ifpt=0; ifpt<ndegr; ifpt++){
             if (facori == 0){
-                //Vertical face
-                Lpoin = facpts[iu(ifpt, 0, ndegr)];
-                Rpoin = facpts[iu(ifpt, 1, ndegr)];
-
-                id  = ndegr * iu(ifpt, 0, ndegr);
-                id2 = ndegr * iu(ifpt, 1, ndegr);
+                offset = 0;
+                //"Vertical" face
             } else {
-                //Horizontal face
-                Lpoin = facpts[iu(ifpt, 2, ndegr)];
-                Rpoin = facpts[iu(ifpt, 3, ndegr)];
-
-                id  = ndegr * iu(ifpt, 2, ndegr);
-                id2 = ndegr * iu(ifpt, 3, ndegr);
+                //"Horizontal" face
+                offset = 2;
             }
 
+            Lpoin = facpts[iu(ifpt, offset, ndegr)];
+            Rpoin = facpts[iu(ifpt, offset+1, ndegr)];
+
+            Lid = ndegr * iu(ifpt, offset, ndegr);
+            Rid = ndegr * iu(ifpt, offset+1, ndegr);
+
             //Calculate the common flux at the face
-            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], common_flux);
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], 0, f_comm);
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], 1, g_comm);
+
+            for (int ivar=0; ivar<NVAR; ivar++){
+                flux_comm[ivar] = JmagL * (ddxL*f_comm[ivar] + ddyL*g_comm[ivar])
+            }
 
             //Calculate the element's local fluxes at the face
             FLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &fL[0]);
@@ -63,8 +73,8 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nvar,\
                     //each face point contributes to the perpendicular set of solution points
                     //need information on those points -
 
-                    int Lpoin2 = id + inode;
-                    int Rpoin2 = id2 + inode;
+                    int Lpoin2 = Lid + inode;
+                    int Rpoin2 = Rid + inode;
                     int tdegr = ndegr*ndegr;
                     fcorr_xi[iu3(Lelem,Lpoin2, kvar, tdegr)] -= (common_flux[kvar] - fL[kvar]) * Dradau[inode];
                     fcorr_xi[iu3(Relem,Rpoin2, kvar, tdegr)] += (common_flux[kvar] - fR[kvar]) * Dradau[inode];
