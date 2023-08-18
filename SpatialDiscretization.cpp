@@ -7,9 +7,9 @@
 
 #define MU (5e-4)
 
-void FluxFaceCorrection(const int nface, const int ndegr,\
+void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                         const double* u, const double* Dradau, const int* inelfa, const int* facpts,\
-                        double* fcorr_xi){
+                        const double* eldrdxi, double* fcorr_xi){
     ///Vertical and horizontal need to be separated into f anf g
     /*
      * Calculates the contribution of the face discontinuities to the flux slope (i.e. the correction term)
@@ -37,23 +37,37 @@ void FluxFaceCorrection(const int nface, const int ndegr,\
 
 
         int facori = inelfa[iu(iface,2,nface)]; //Face Orientation
-        int offset;
+        int offset, ind;
+        double ddxL, ddyL, ddxR, ddyR;
 
         //Loop over the fact points
         for (int ifpt=0; ifpt<ndegr; ifpt++){
             if (facori == 0){
+                //"Vertical" face - dxid() derivs
                 offset = 0;
-                //"Vertical" face
+                //Find the transform derivatives
+                ind = 2 * iu(Lelem, ifpt + 0, nelem);
+                ddxL = eldrdxi[ind + 0];
+                ddyL = eldrdxi[ind + 1];
+                ind = 2 * iu(Relem, ifpt + 0, nelem);
+                ddxR = eldrdxi[ind + 0];
+                ddxR = eldrdxi[ind + 1];
+
             } else {
-                //"Horizontal" face
+                //"Horizontal" face - detad() derivs
                 offset = 2;
+                //Find the transform derivatives
+                ind = 2 * iu(Lelem, ifpt + ndegr, nelem);
+                ddxL = eldrdxi[ind + 0];
+                ddyL = eldrdxi[ind + 1];
+                ind = 2 * iu(Relem, ifpt + ndegr, nelem);
+                ddxR = eldrdxi[ind + 0];
+                ddxR = eldrdxi[ind + 1];
             }
 
             Lpoin = facpts[iu(ifpt, offset, ndegr)];
             Rpoin = facpts[iu(ifpt, offset+1, ndegr)];
 
-            Lid = ndegr * iu(ifpt, offset, ndegr);
-            Rid = ndegr * iu(ifpt, offset+1, ndegr);
 
             //Calculate the common flux at the face
             FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], 0, f_comm);

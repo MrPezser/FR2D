@@ -163,11 +163,20 @@ void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const
             int ind = 2 * iu(ielem, islice + 0, nelem);
             eldrdxi[ind + 0] = dxdxi;
             eldrdxi[ind + 1] = dydxi;
-
             //eta derivatives
             ind = 2 * iu(ielem, islice + ndegr, nelem);
             eldrdxi[ind + 0] = dxdeta;
             eldrdxi[ind + 1] = dydeta;
+
+            //x derivatives
+            ind = 2 * iu(ielem, islice + 0, nelem);
+            eldxidr[ind + 0] = dxidx;
+            eldxidr[ind + 1] = dxidy;
+            //y derivatives
+            ind = 2 * iu(ielem, islice + ndegr, nelem);
+            eldxidr[ind + 0] = detadx;
+            eldxidr[ind + 1] = detady;
+
         }
         for (int i_xi=0; i_xi<order; i_xi++){
             for (int j_eta=0; j_eta<order; j_eta++) {
