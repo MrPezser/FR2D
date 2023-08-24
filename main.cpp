@@ -1,12 +1,13 @@
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 
 #include "indexing.h"
 #include "basis.h"
 #include "EulerFlux.h"
 #include "SpatialDiscretization.h"
 #include "Setup2D.h"
-
+#include "output.h"
 
 
 using namespace std;
@@ -69,7 +70,7 @@ int main() {
     int nface = (2*nelem + (imx-1) + (jmx-1));
     int npoin = imx*jmx;
 
-    int ndegr = 4;             //Degrees of freedom per element in one dimension
+    int ndegr = 1;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
     int nvar = 3;              //Number of variables
     int nu = nelem * ndegr * nvar;
@@ -92,17 +93,21 @@ int main() {
     auto* Dradau = (double*)malloc((1+ndegr)*sizeof(double));
     GenerateRadauDerivatives(ndegr, xi, Dradau);
 
-
     //Setup for 2D based on a structured Quad grid (structure input, processing done unstructred)
     int *inpoel, *inpofa, *inelfa;
     LoadStruct2Unstruct(imx, jmx, nelem, nface, &inpoel, &inpofa, &inelfa);
 
-    //test grid
-    double dx = 1.0 / (double)imx;
-    double dy = 1.0 / (double)jmx;
 
-    auto* x = (double*)malloc(npoin*sizeof(double));
-    auto* y = (double*)malloc(npoin*sizeof(double));
+    //test grid
+    double dx = 1.0 / (double)(imx-1);
+    double dy = 1.0 / (double)(jmx-1);
+
+
+    //auto* x = (double*)malloc(npoin*sizeof(double));
+    //auto* y = (double*)malloc(npoin*sizeof(double));
+    double x[npoin];
+    double y[npoin];
+
     for (int j = 0; j < jmx; j++) {
         for (int i = 0; i < imx; i++) {
             int ipoin = iu(i,j,imx);
@@ -112,11 +117,15 @@ int main() {
         }
     }
 
-    double* eldrdxi;
-    CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi);
+    auto* eldrdxi = (double*)malloc(nelem*ndegr*4*sizeof(double));
+    auto* eldxidr = (double*)malloc(nelem*ndegr*4*sizeof(double));
+    auto* eljac   = (double*)malloc(nelem*ndegr*ndegr*sizeof(double));
+    CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi, eldxidr, eljac);
 
     int* facpts;
     FacePoint2PointMap(ndegr,facpts);
+
+    printgrid("Title", inpoel, nelem, npoin, x, y);
 
     //This should be recalculated each time step
     double dt = (cfl * fmin(dx, dy)); ///Remember to do this
@@ -131,18 +140,13 @@ int main() {
 
 
     //Generate Grid (currently uniform 2D) & initialize solution
-    double dx = 1.0 / (double)imx;
-    double dy = 1.0 / (double)jmx;
-
     for (int i=0; i<nelem; i++){
         for (int j=0; j<ndegr; j++) {
             for (int k=0; k<ndegr; k++) {
-                //defining x & y position of cell centers
-                x[k] = (k+0.5) * dx;
-                y[j] = (j+0.5) * dy;
-
                 int jnode = iu(k,j,ndegr);
-                InitializeEuler(x[k] + xi[k] * (0.5 * dx), y[j] + xi[j] * (0.5 * dx), &u[iu3(i, jnode, 0, tdegr)]);
+                double xnode = x[k] + xi[k] * (0.5 * dx);  ///assuming cartesean grid
+                double ynode = y[j] + xi[j] * (0.5 * dx);
+                InitializeEuler(xnode, ynode, &u[iu3(i, jnode, 0, tdegr)]);
             }
         }
     }
@@ -155,7 +159,7 @@ int main() {
     for (int iter=0; iter<niter; iter++){
         veccopy(u_tmp, u, nu);
         //1st stage
-        CalcDudt(nelem, ndegr, nface, nvar, dx, inelfa, facpts, u, Dmatrix, Dradau, dudt );
+        CalcDudt(nelem, ndegr, nface, NVAR, inelfa, facpts, u, Dmatrix, Dradau, eldxidr, eljac, dudt);
         for (int i=0; i<nu; i++){
             //u_tmp[i] += dt * dudt[i];
             u[i] += dt * dudt[i];
@@ -182,7 +186,10 @@ int main() {
 
     printf("iter=%d\tdt=%f\n", niter, dt);
 
-    //Printout Final Solution
+    printscalar("FV Output", "rho", "rho_u", "rho_v", "rho_e", inpoel, nelem, npoin, x, y, u);
+
+    /*
+    //Printout Solution
     FILE* fout = fopen("waveout.tec", "w");
     fprintf(fout, "x\tu\tu0\n");
 
@@ -199,6 +206,7 @@ int main() {
         }
     }
     fclose(fout);
+    */
 
 
     free(xi);

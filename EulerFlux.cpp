@@ -59,6 +59,7 @@ void EulerFlux(const double gam,const int dim, const double *u, double* flux){
     }
 }
 
+/*
 void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     /// NOT UPDATED FOR 2D
     double rhoL, vL, pL, cL, ML;
@@ -121,10 +122,10 @@ void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     e3[2] = coeff * (h0 - (v*c));
 
     //Calculate left and right flux states
-    /*auto*fluxLeft = (double*)malloc(3*sizeof(double));
-    auto*fluxRight = (double*)malloc(3*sizeof(double));
-    EulerFlux(gam, uL, fluxLeft);
-    EulerFlux(gam, uR, fluxRight);*/
+    //auto*fluxLeft = (double*)malloc(3*sizeof(double));
+    //auto*fluxRight = (double*)malloc(3*sizeof(double));
+    //EulerFlux(gam, uL, fluxLeft);
+    //EulerFlux(gam, uR, fluxRight);
     double fluxLeft[3], fluxRight[3];
     fluxLeft[0]  = uL[1];
     fluxRight[0] = uR[1];
@@ -142,7 +143,7 @@ void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     roeFlux[1] = 0.5 * (fluxRight[1] + fluxLeft[1] - (e1[1]*phi[0]*dw1) - (e2[1]*phi[1]*dw2) - (e3[1]*phi[2]*dw3));
     roeFlux[2] = 0.5 * (fluxRight[2] + fluxLeft[2] - (e1[2]*phi[0]*dw1) - (e2[2]*phi[1]*dw2) - (e3[2]*phi[2]*dw3));
 
-}
+} */
 
 double F1pm(const int isPlus, const double M, const double rho, const double c){
 
