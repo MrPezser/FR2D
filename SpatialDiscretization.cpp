@@ -9,13 +9,14 @@
 
 void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                         const double* u, const double* Dradau, const int* inelfa, const int* facpts,\
-                        const double* eldrdxi, double* fcorr_xi){
+                        const double* eldxidr, const double* geoel, double* fcorr_xi){
     ///Vertical and horizontal need to be separated into f anf g
     /*
      * Calculates the contribution of the face discontinuities to the flux slope (i.e. the correction term)
      */
 
-    double fL[NVAR], fR[NVAR], f_comm[NVAR], g_comm[NVAR], flux_comm_L[NVAR], flux_comm_R[NVAR];
+    double fL[NVAR], fR[NVAR], gL[NVAR], gR[NVAR], local_L[NVAR], local_R[NVAR], flux_comm_L[NVAR], flux_comm_R[NVAR];
+    int tdegr = ndegr*ndegr;
 
     for (int iface=0; iface<nface; iface++){
         int Lelem, Relem, Lpoin, Rpoin, Lid, Rid;
@@ -38,60 +39,97 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
         int facori = inelfa[iu(iface,2,nface)]; //Face Orientation
         int offset, ind;
-        double ddxL, ddyL, ddxR, ddyR;
+        double ddxL, ddyL, ddxR, ddyR, JmagL, JmagR;
+        double nvec[4];
 
         //Loop over the fact points
         for (int ifpt=0; ifpt<ndegr; ifpt++){
             if (facori == 0){
                 //"Vertical" face - dxid() derivs
-                offset = 0;
+                Lpoin = facpts[iu(ifpt, 0, ndegr)];
+                Rpoin = facpts[iu(ifpt, 1, ndegr)];
+
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + 0, nelem);
-                ddxL = eldrdxi[ind + 0];
-                ddyL = eldrdxi[ind + 1];
+                ddxL = eldxidr[ind + 0];
+                ddyL = eldxidr[ind + 1];
                 ind = 2 * iu(Relem, ifpt + 0, nelem);
-                ddxR = eldrdxi[ind + 0];
-                ddxR = eldrdxi[ind + 1];
+                ddxR = eldxidr[ind + 0];
+                ddyR = eldxidr[ind + 1];
+
 
             } else {
                 //"Horizontal" face - detad() derivs
-                offset = 2;
+                Lpoin = facpts[iu(ifpt, 2, ndegr)];
+                Rpoin = facpts[iu(ifpt, 3, ndegr)];
+
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + ndegr, nelem);
-                ddxL = eldrdxi[ind + 0];
-                ddyL = eldrdxi[ind + 1];
+                ddxL = eldxidr[ind + 0];
+                ddyL = eldxidr[ind + 1];
                 ind = 2 * iu(Relem, ifpt + ndegr, nelem);
-                ddxR = eldrdxi[ind + 0];
-                ddxR = eldrdxi[ind + 1];
+                ddxR = eldxidr[ind + 0];
+                ddyR = eldxidr[ind + 1];
+
             }
 
-            Lpoin = facpts[iu(ifpt, offset, ndegr)];
-            Rpoin = facpts[iu(ifpt, offset+1, ndegr)];
+
+            JmagL = geoel[iu(Lelem, Lpoin, nelem)];
+            JmagR = geoel[iu(Relem, Rpoin, nelem)];
+
+            //direction of the left reference direction in the real plane
+            double len = sqrt(ddxL*ddxL + ddyL*ddyL);
+            nvec[0] = ddxL / len;
+            nvec[1] = ddyL / len;
+            //dir of the Right element's reference lines
+            len = sqrt(ddxR*ddxR + ddyR*ddyR);
+            nvec[2] = ddxR / len;
+            nvec[3] = ddyR / len;
+
+            //Calculate the flux in the respective grid directions
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], &nvec[0], flux_comm_L);
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], &nvec[2], flux_comm_R);
 
 
-            //Calculate the common flux at the face
-            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], 0, f_comm);
-            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], 1, g_comm);
-
-            for (int ivar=0; ivar<NVAR; ivar++){
-                flux_comm[ivar] = JmagL * (ddxL*f_comm[ivar] + ddyL*g_comm[ivar])
-            }
 
             //Calculate the element's local fluxes at the face
-            FLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &fL[0]);
-            FLUX(&u[iu3(Relem, Rpoin, 0, ndegr)], &fR[0]);
+            FLUX(0, &u[iu3(Lelem, Lpoin, 0, ndegr)], &fL[0]);
+            FLUX(1, &u[iu3(Lelem, Lpoin, 0, ndegr)], &gL[0]);
 
+            FLUX(0, &u[iu3(Relem, Rpoin, 0, ndegr)], &fR[0]);
+            FLUX(1, &u[iu3(Relem, Rpoin, 0, ndegr)], &gR[0]);
+
+            //Rotate the Local Fluxes to be in line with the reference directions
+            for (int ivar=0; ivar<NVAR; ivar++){
+                local_L[ivar] = JmagL * (ddxL*fL[ivar] + ddyL*gL[ivar]);
+                local_R[ivar] = JmagR * (ddxR*fR[ivar] + ddyR*gR[ivar]);
+            }
+
+
+            //Add contributions to the corrected flux
             for (int inode=0; inode<ndegr; inode++){
-                for (int kvar = 0; kvar<nvar; kvar++) {
+                for (int kvar = 0; kvar<NVAR; kvar++) {
                     ///Figure out the new node mapping... omg this is horrendous
                     //each face point contributes to the perpendicular set of solution points
                     //need information on those points -
+                    //Points indexed; ipoin = iu(i_xi, j_eta, ni)
+                    //For Vertical Face
+                    //  Lfacpt: (xi_max,  eta=ifpt)
+                    //  Rfacpt: (xi=0,    eta=ifpt)
+                    //  Lpoin:  (xi=nnode - inode,eta=ifpt)
+                    //  Rpoin:  (xi=inode, eta=ifpt)
+                    int Lpoin2, Rpoin2;
+                    if (facori == 0) {
+                        Lpoin2 = iu(ndegr - inode, ifpt, ndegr);
+                        Rpoin2 = iu(inode, ifpt, ndegr);
+                    } else {
+                        // Horizontal Face
+                        Lpoin2 = iu(ifpt, inode, ndegr);
+                        Rpoin2 = iu(ifpt, ndegr - inode, ndegr);
+                    }
 
-                    int Lpoin2 = Lid + inode;
-                    int Rpoin2 = Rid + inode;
-                    int tdegr = ndegr*ndegr;
-                    fcorr_xi[iu3(Lelem,Lpoin2, kvar, tdegr)] -= (common_flux[kvar] - fL[kvar]) * Dradau[inode];
-                    fcorr_xi[iu3(Relem,Rpoin2, kvar, tdegr)] += (common_flux[kvar] - fR[kvar]) * Dradau[inode];
+                    fcorr_xi[iu3(Lelem,Lpoin2, kvar, tdegr)] -= (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
+                    fcorr_xi[iu3(Relem,Rpoin2, kvar, tdegr)] += (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
                 }
             }
 

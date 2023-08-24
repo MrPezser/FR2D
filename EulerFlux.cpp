@@ -35,7 +35,7 @@ void getPrimativesPN(const double gam, const double *unkel, double *rho, double 
     if (isnan(M[0])) {throw overflow_error("Nonpositive Density\n");}
 }
 
-void EulerFlux(const int dim, const double gam, const double *u, double* flux){
+void EulerFlux(const double gam,const int dim, const double *u, double* flux){
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
@@ -171,7 +171,7 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(const double gam, const double* uL, const double* uR, const int nvec, double *flux){
+void LeerFlux(const double gam, const double* uL, const double* uR, const double* nvec, double *flux){
     /*
      * gam - ratio of specific heats
      * uL - Left state variables
@@ -183,8 +183,8 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const int nv
     double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL;
     double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR;
 
-    nx = (1.0 - (double)nvec);
-    ny = (double)nvec;
+    nx = nvec[0];
+    ny = nvec[1];
 
     flux[0] = 0.0;
     flux[1] = 0.0;
@@ -208,6 +208,9 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const int nv
     if(isnan(F1L+F1R)){
         throw overflow_error("getting NAN mass flux!");
     }
+
+    vnL = nx*vxL + ny*vyL;
+    vnR = nx*vxR + ny*vyR;
 
     //Compute the positive fluxes (left of face)
     if (MnL > 1.0) {

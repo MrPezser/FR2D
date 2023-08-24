@@ -7,9 +7,9 @@
 
 #include "indexing.h"
 
-void EulerFlux(double gam, double *u, double* flux);
+void EulerFlux(double gam, int dir, const double *u, double* flux);
 void RoeFDS(double gam, double* uL, double *uR, double* roeFlux);
-void LeerFlux(double gam, const double* uL, const double* uR, int nvec, double *flux);
+void LeerFlux(double gam, const double* uL, const double* uR, double* nvec, double *flux);
 void getPrimativesPN(double gam, const double *unkel, double *rho, double *v, double *p, double *c, double *M);
 
 
