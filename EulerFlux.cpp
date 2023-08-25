@@ -190,7 +190,7 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
-    flux[4] = 0.0;
+    flux[3] = 0.0;
 
     getPrimativesPN(gam, uL, &rhoL, &vxL, &vyL, &pL, &cL, &ML);
     getPrimativesPN(gam, uR, &rhoR, &vxR, &vyR, &pR, &cR, &MR);
@@ -256,4 +256,6 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
     flux[1] = fPlus[1] + fMins[1];
     flux[2] = fPlus[2] + fMins[2];
     flux[3] = fPlus[3] + fMins[3];
+
+    ASSERT(!_isnan(flux[0]) && !_isnan(flux[1]) && !_isnan(flux[2]) && !_isnan(flux[3]), "NAN split flux")
 }

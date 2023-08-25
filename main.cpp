@@ -21,7 +21,7 @@ void veccopy(double* a, const double* b, size_t n){
 double Initialize(double x){
     ///This defines the intial state of the solution space
 
-
+    /*
     //Gaussian bump and step combo
     if (x < 0.6) {
         double beta = 0.01;
@@ -32,7 +32,9 @@ double Initialize(double x){
         } else {
             return 1.0;
         }
-    }
+    }*/
+
+    return x + 1.0;
 
     //return 2.0 + sin(2.0*M_PI*x);
 
@@ -41,44 +43,49 @@ double Initialize(double x){
 
 void InitializeEuler(double x, double y, double* u){
     double rho = 1.0;
-    double v = 1.0;
+    double vx = 1.0;
+    double vy = 0.0;
     double p = 1.0;
 
-    //rho = Initialize(x);
+    rho = Initialize(x);
 
+    /*  //shock problem
     if (x < 0.5 && y < 0.5){
         //rho = 1.0;
-        v = 0.0;
+        vx = 0.0;
+        //vy = 0.0;
         //p = 1.0;
     } else {
         rho = 0.125;
-        v = 0.0;
+        vx = 0.0;
+        //vy = 0.0;
         p = 0.1;
-    }
+    }*/
 
     u[0] = rho;                             //rho
-    u[1] = rho * v;                         //rho V
-    u[2] = 0.5*rho*v*v + (p/(GAM-1.0));       //rho e
+    u[1] = rho * vx;                        //rho Vx
+    u[2] = rho * vy;                        //rho Vy
+    double vmags = vx*vx + vy*vy;
+    u[3] = 0.5*rho*vmags + (p/(GAM-1.0));     //rho e
 }
 
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 10;
-    int jmx = 10;
+    int imx = 31;
+    int jmx = 31;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
     int npoin = imx*jmx;
 
     int ndegr = 1;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
-    int nvar = 3;              //Number of variables
-    int nu = nelem * ndegr * nvar;
+    //int nvar = NVAR;              //Number of variables
+    int nu = nelem * tdegr * NVAR;
 
     double cfl = 0.01 / (ndegr*ndegr);          //CFL Number
-    double a = 1.0;             //Wave Speed
 
-    double tmax = 0.2;
+    double tmax = 0.05;
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -122,7 +129,7 @@ int main() {
     auto* eljac   = (double*)malloc(nelem*ndegr*ndegr*sizeof(double));
     CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi, eldxidr, eljac);
 
-    int* facpts;
+    auto* facpts = (int*)malloc(4*ndegr*sizeof(int));
     FacePoint2PointMap(ndegr,facpts);
 
     printgrid("Title", inpoel, nelem, npoin, x, y);
@@ -134,24 +141,28 @@ int main() {
     int niter = ceil(tmax/dt);
 
     //Allocate Arrays
-    auto* u = (double*)malloc(nu*sizeof(double));
-    auto* u0 = (double*)malloc(nu*sizeof(double));
-    auto* dudt = (double*)malloc(nu*sizeof(double));
+    auto* u = (double*)malloc(2*nu*sizeof(double));
+    auto* u0 = (double*)malloc(2*nu*sizeof(double));
+    auto* dudt = (double*)malloc(2*nu*sizeof(double));
 
 
     //Generate Grid (currently uniform 2D) & initialize solution
-    for (int i=0; i<nelem; i++){
+    for (int ielem=0; ielem<nelem; ielem++){
         for (int j=0; j<ndegr; j++) {
             for (int k=0; k<ndegr; k++) {
                 int jnode = iu(k,j,ndegr);
-                double xnode = x[k] + xi[k] * (0.5 * dx);  ///assuming cartesean grid
-                double ynode = y[j] + xi[j] * (0.5 * dx);
-                InitializeEuler(xnode, ynode, &u[iu3(i, jnode, 0, tdegr)]);
+                int ipoin = inpoel[iu(ielem, 0, nelem)]; //BL corner
+
+                double xnode = x[ipoin] + (xi[k] + 1.0) * (0.5 * dx);  ///assuming cartesean grid
+                double ynode = y[ipoin] + (xi[j] + 1.0) * (0.5 * dy);
+                InitializeEuler(xnode, ynode, &u[iu3(ielem, jnode, 0, tdegr)]);
             }
         }
     }
 
     veccopy(u0,u,nu);
+
+    //printf("elem:%d \t rho*u: %f\n", 99, u[iu3(99, 0, 1, tdegr)]);
 
     // Begin Time Marching (3 stage TVD RK)
     auto* u_tmp = (double*)malloc(nu*sizeof(double));
@@ -159,7 +170,7 @@ int main() {
     for (int iter=0; iter<niter; iter++){
         veccopy(u_tmp, u, nu);
         //1st stage
-        CalcDudt(nelem, ndegr, nface, NVAR, inelfa, facpts, u, Dmatrix, Dradau, eldxidr, eljac, dudt);
+        CalcDudt(nelem, ndegr, nface, NVAR, inelfa, facpts, u, Dmatrix, Dradau, eldrdxi, eldxidr, eljac, dudt);
         for (int i=0; i<nu; i++){
             //u_tmp[i] += dt * dudt[i];
             u[i] += dt * dudt[i];
@@ -181,7 +192,7 @@ int main() {
             u[i] = (1.0/3.0)*u[i] + (2.0/3.0)*(u_tmp[i] + dt*dudt[i]);
         }*/
 
-        if (iter % 100 == 0){printf("iter:%10d\t%7.2f%% Complete\n",iter, 100.0*(double)iter/(double)niter);}
+        if (iter % 10 == 0){printf("iter:%10d\t%7.2f%% Complete\n",iter, 100.0*(double)iter/(double)niter);}
     }
 
     printf("iter=%d\tdt=%f\n", niter, dt);
@@ -208,11 +219,11 @@ int main() {
     fclose(fout);
     */
 
-
+    /*
     free(xi);
     free(u);
     free(u0);
     free(dudt);
     free(Dmatrix);
-    free(Dradau);
+    free(Dradau); */
 }

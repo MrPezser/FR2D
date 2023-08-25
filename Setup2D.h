@@ -7,6 +7,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include "indexing.h"
 
 void LoadStruct2Unstruct(int imx, int jmx, int nelem, int nface, int** inpoel, int** inpofa, int** inelfa);

@@ -9,7 +9,7 @@
 
 void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                         const double* u, const double* Dradau, const int* inelfa, const int* facpts,\
-                        const double* eldxidr, const double* eljac, double* fcorr_xi){
+                        const double* eldrdxi, const double* eldxidr, const double* eljac, double* fcorr_xi){
     ///Vertical and horizontal need to be separated into f anf g
     /*
      * Calculates the contribution of the face discontinuities to the flux slope (i.e. the correction term)
@@ -34,12 +34,12 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
             bcside = 1;
         }
 
-        if (Relem) throw "somthang messed up";
+        //if (Relem) throw "somthang messed up";
 
 
         int facori = inelfa[iu(iface,2,nface)]; //Face Orientation
         int offset, ind;
-        double ddxL, ddyL, ddxR, ddyR, JmagL, JmagR;
+        double dxdL, dydL, dxdR, dydR, JmagL, JmagR, ddxL, ddxR, ddyL, ddyR;
         double nvec[4];
 
         //Loop over the fact points
@@ -51,12 +51,16 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + 0, nelem);
+                dxdL = eldrdxi[ind + 0];
+                dydL = eldrdxi[ind + 1];
                 ddxL = eldxidr[ind + 0];
                 ddyL = eldxidr[ind + 1];
+
                 ind = 2 * iu(Relem, ifpt + 0, nelem);
+                dxdR = eldrdxi[ind + 0];
+                dydR = eldrdxi[ind + 1];
                 ddxR = eldxidr[ind + 0];
                 ddyR = eldxidr[ind + 1];
-
 
             } else {
                 //"Horizontal" face - detad() derivs
@@ -65,9 +69,14 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + ndegr, nelem);
+                dxdL = eldrdxi[ind + 0];
+                dydL = eldrdxi[ind + 1];
                 ddxL = eldxidr[ind + 0];
                 ddyL = eldxidr[ind + 1];
+
                 ind = 2 * iu(Relem, ifpt + ndegr, nelem);
+                dxdR = eldrdxi[ind + 0];
+                dydR = eldrdxi[ind + 1];
                 ddxR = eldxidr[ind + 0];
                 ddyR = eldxidr[ind + 1];
 
@@ -78,31 +87,38 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
             JmagR = eljac[iu(Relem, Rpoin, nelem)];
 
             //direction of the left reference direction in the real plane
-            double len = sqrt(ddxL*ddxL + ddyL*ddyL);
-            nvec[0] = ddxL / len;
-            nvec[1] = ddyL / len;
+            double len = sqrt(dxdL*dxdL + dydL*dydL);
+            nvec[0] = dxdL / len;
+            nvec[1] = dydL / len;
             //dir of the Right element's reference lines
-            len = sqrt(ddxR*ddxR + ddyR*ddyR);
-            nvec[2] = ddxR / len;
-            nvec[3] = ddyR / len;
+            len = sqrt(dxdR*dxdR + dydR*dydR);
+            nvec[2] = dxdR / len;
+            nvec[3] = dydR / len;
 
             //Calculate the flux in the respective grid directions
-            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], &nvec[0], flux_comm_L);
-            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, ndegr)], &u[iu3(Relem, Rpoin, 0, ndegr)], &nvec[2], flux_comm_R);
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, tdegr)], &u[iu3(Relem, Rpoin, 0, tdegr)], &nvec[0], &flux_comm_L[0]);
+            FACEFLUX(&u[iu3(Lelem, Lpoin, 0, tdegr)], &u[iu3(Relem, Rpoin, 0, tdegr)], &nvec[2], &flux_comm_R[0]);
 
+            for (int kvar=0; kvar< NVAR; kvar++){
+                ///THIS IS PROBABLY WRONG AND I NEED TO CHANGE IT BUT I AM GOING TO SEE IF IT WORKS FOR THIS SIMPLIFIED CASE
+                flux_comm_L[kvar] *= 1.0 / (ddxL + ddyL);
+                flux_comm_R[kvar] *= 1.0 / (ddxR + ddyR);
+            }
 
 
             //Calculate the element's local fluxes at the face
-            FLUX(0, &u[iu3(Lelem, Lpoin, 0, ndegr)], &fL[0]);
-            FLUX(1, &u[iu3(Lelem, Lpoin, 0, ndegr)], &gL[0]);
+            FLUX(0, &u[iu3(Lelem, Lpoin, 0, tdegr)], &fL[0]);
+            FLUX(1, &u[iu3(Lelem, Lpoin, 0, tdegr)], &gL[0]);
 
-            FLUX(0, &u[iu3(Relem, Rpoin, 0, ndegr)], &fR[0]);
-            FLUX(1, &u[iu3(Relem, Rpoin, 0, ndegr)], &gR[0]);
+            FLUX(0, &u[iu3(Relem, Rpoin, 0, tdegr)], &fR[0]);
+            FLUX(1, &u[iu3(Relem, Rpoin, 0, tdegr)], &gR[0]);
 
             //Rotate the Local Fluxes to be in line with the reference directions
             for (int ivar=0; ivar<NVAR; ivar++){
                 local_L[ivar] = JmagL * (ddxL*fL[ivar] + ddyL*gL[ivar]);
                 local_R[ivar] = JmagR * (ddxR*fR[ivar] + ddyR*gR[ivar]);
+
+                ASSERT(!_isnan(local_L[ivar]) && !_isnan(local_R[ivar]), "NAN local face fluxes")
             }
 
 
@@ -120,12 +136,16 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                     //  Rpoin:  (xi=inode, eta=ifpt)
                     int Lpoin2, Rpoin2;
                     if (facori == 0) {
-                        Lpoin2 = iu(ndegr - inode, ifpt, ndegr);
+                        Lpoin2 = iu(ndegr-1 - inode, ifpt, ndegr);
                         Rpoin2 = iu(inode, ifpt, ndegr);
                     } else {
                         // Horizontal Face
                         Lpoin2 = iu(ifpt, inode, ndegr);
-                        Rpoin2 = iu(ifpt, ndegr - inode, ndegr);
+                        Rpoin2 = iu(ifpt, ndegr-1 - inode, ndegr);
+                    }
+
+                    if ((local_L[kvar] - flux_comm_L[kvar]) != 0.0 || (local_R[kvar] - flux_comm_R[kvar]) != 0.0){
+                        //printf("wack\n");
                     }
 
                     if (bcside == 0) {
@@ -148,7 +168,7 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
     }
 }
 
-void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const double* Dmatrix, double* fcorr_xi) {
+void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const double* Dmatrix, const double* eldxidr, double* fcorr_xi) {
     ///Vertical and horizontal need to be separated into f anf g
     double fxi[NVAR], geta[NVAR];
     int tdegr= ndegr*ndegr;
@@ -197,6 +217,7 @@ void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const 
                         int hnode = iu(k,j,ndegr);
 
                         //Vertical
+                        ///make transformation to reference directions eta and xi in stead of x and y
                         fxi[kvar] += g_node[iu(vnode, kvar, tdegr)] * Dmatrix[iu(i, k, tdegr)];
                         //Horizontal
                         fxi[kvar] += f_node[iu(hnode, kvar, tdegr)] * Dmatrix[iu(j, k, tdegr)];
@@ -217,7 +238,7 @@ void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const 
 
 void CalcDudt(const int nelem, const int ndegr, const int nface, const int nvar,\
               const int* inelfa, const int* facpts, const double* u, const double* Dmatrix, const double* Dradau,\
-              const double* eldxidr, const double* eljac,\
+              const double* eldrdxi, const double* eldxidr, const double* eljac,\
               double* dudt ){
     ///Calculates the solution update given a function to find flux
     int nu    = nelem * ndegr * nvar;
@@ -233,8 +254,8 @@ void CalcDudt(const int nelem, const int ndegr, const int nface, const int nvar,
     ///Need Boundary Conditions!!! (currently neumann = 0 everywhere)
 
     //Flux Reconstruction (P_ndegr)
-    FluxFaceCorrection(nface, ndegr, nelem, u, Dradau, inelfa, facpts, eldxidr, eljac, fcorr_xi);
-    DiscontinuousFlux(nelem, ndegr, u, Dmatrix, fcorr_xi);
+    FluxFaceCorrection(nface, ndegr, nelem, u, Dradau, inelfa, facpts, eldrdxi, eldxidr, eljac, fcorr_xi);
+    DiscontinuousFlux(nelem, ndegr, u, Dmatrix, eldxidr, fcorr_xi);
 
 
     for (int ielem=0; ielem<nelem; ielem++) {
@@ -244,7 +265,7 @@ void CalcDudt(const int nelem, const int ndegr, const int nface, const int nvar,
 
                     double Jacobi = eljac[iu(ielem, inode, nelem)]; //coordinate transform jacobian
                     dudt[iu3(ielem, inode, kvar, ndegr)] = -(1 / Jacobi) * (fcorr_xi[iu3(ielem, inode, kvar, ndegr)]);\
-                    throw std::overflow_error("dude you forgot to delete this error\n");
+                    //throw std::overflow_error("dude you forgot to delete this error\n");
 
                     if (_isnan(dudt[iu3(ielem, inode, kvar, ndegr)])) {
                         throw std::overflow_error("try again loser\n dudt NAN\n");

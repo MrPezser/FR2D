@@ -19,7 +19,7 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
     //
     *inpoel = (int*)malloc(4*nelem*sizeof(int));
     *inpofa = (int*)malloc(2*nface*sizeof(int));
-    *inelfa = (int*)malloc(2*nface*sizeof(int));
+    *inelfa = (int*)malloc(3*nface*sizeof(int));
 
 
     //loop through every element
@@ -63,21 +63,21 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
             }
 
             if (i==imx-2){ //very far right
-                iface = 2*nelem + 1 + j;
+                iface = 2*nelem + j;
                 (*inpofa)[iu(iface,0,nface)] = iu(i+1,j  ,imx);    //Bot Rig
                 (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);    //Top Rig
 
-                (*inelfa)[iu(iface,0,nface)] = -1;     //elem left of face
-                (*inelfa)[iu(iface,1,nface)] = ielem;  //elem right of face
-                (*inelfa)[iu(iface,2,nface)] = 0; //Vertical face
+                (*inelfa)[iu(iface,0,nface)] = ielem; //elem left of face
+                (*inelfa)[iu(iface,1,nface)] = -1;    //elem right of face
+                (*inelfa)[iu(iface,2,nface)] = 0;     //Vertical face
             }
             if (j==jmx-2){ //very far top
-                iface = 2*nelem + 1 + jmx-1 + i;
+                iface = 2*nelem + jmx-1 + i;
                 (*inpofa)[iu(iface,0,nface)] = iu(i  ,j+1,imx);     //Top Lef
                 (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);     //Top Rig
 
-                (*inelfa)[iu(iface,0,nface)] = ielem; //elem left of face
-                (*inelfa)[iu(iface,1,nface)] = -1;    //elem right of face
+                (*inelfa)[iu(iface,0,nface)] = -1;     //elem left of face
+                (*inelfa)[iu(iface,1,nface)] = ielem;  //elem right of face
                 (*inelfa)[iu(iface,2,nface)] =  1; //Horizontal face
             }
 
@@ -154,10 +154,14 @@ void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const
             double dxdeta = (etamax_x - etamin_x) / 2.0;
             double dydeta = (etamax_y - etamin_y) / 2.0;
 
-            double dxidx  = 1.0 / dxdxi;
-            double dxidy  = 1.0 / dydxi;
-            double detadx = 1.0 / dxdeta;
-            double detady = 1.0 / dydeta;
+            //Perform matrix inversion
+            double determinant = (dxdxi*dydeta) - (dydxi*dxdeta);
+            ASSERT(determinant > 0, "Singular transformaton on element")
+
+            double dxidx  =  dydeta/ determinant;
+            double dxidy  = -dydxi / determinant;
+            double detadx = -dxdeta/ determinant;
+            double detady =  dxdxi / determinant;
 
             //xi derivatives
             int ind = 2 * iu(ielem, islice + 0, nelem);
@@ -222,7 +226,7 @@ void FacePoint2PointMap(int ndegr, int* facpts) {
 
             //Vertical Face
             //Left
-            facpts[id +j] = iu(ndegr-1-j, i, ndegr); // Left side of vertical face
+            facpts[id +j] = 0;//iu(ndegr-1-j, i, ndegr); // Left side of vertical face
             //Right
             facpts[id2+j] = iu(j        , i, ndegr); // Right side of vertical face
 

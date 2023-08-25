@@ -17,6 +17,6 @@
 
 void CalcDudt(int nelem, int ndegr, int nface, int nvar,\
               const int* inelfa, const int* facpts, const double* u, const double* Dmatrix, const double* Dradau,\
-              const double* eldxidr, const double* eljac,\
+              const double* eldrdxi, const double* eldxidr, const double* eljac,\
               double* dudt );
 #endif //FR1D_SPATIALDISCRETIZATION_H
