@@ -34,23 +34,23 @@ double Initialize(double x){
         }
     }*/
 
-    return x + 1.0;
+    //return x + 1.0;
 
     //return 2.0 + sin(2.0*M_PI*x);
 
-    //return 1.0 + exp(-40*(x-0.5)*(x-0.5));
+    return 1.0 + exp(-40*(x-0.5)*(x-0.5));
 }
 
 void InitializeEuler(double x, double y, double* u){
     double rho = 1.0;
-    double vx = 1.0;
+    double vx = 2.0;
     double vy = 0.0;
     double p = 1.0;
 
-    rho = Initialize(x);
+    //rho = Initialize(x);
 
-    /*  //shock problem
-    if (x < 0.5 && y < 0.5){
+      //shock problem
+    if (y < 0.5 && x < 0.5){
         //rho = 1.0;
         vx = 0.0;
         //vy = 0.0;
@@ -60,7 +60,7 @@ void InitializeEuler(double x, double y, double* u){
         vx = 0.0;
         //vy = 0.0;
         p = 0.1;
-    }*/
+    }
 
     u[0] = rho;                             //rho
     u[1] = rho * vx;                        //rho Vx
@@ -72,20 +72,21 @@ void InitializeEuler(double x, double y, double* u){
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 31;
-    int jmx = 31;
+    int imx = 501;
+    int jmx = 501;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
+    int nbfac = 2*(imx-1) + 2*(jmx-1);
     int npoin = imx*jmx;
 
     int ndegr = 1;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
     //int nvar = NVAR;              //Number of variables
-    int nu = nelem * tdegr * NVAR;
+    int nu = (nelem + nbfac) * tdegr * NVAR;
 
-    double cfl = 0.01 / (ndegr*ndegr);          //CFL Number
+    double cfl = 0.1 / (ndegr*ndegr);          //CFL Number
 
-    double tmax = 0.05;
+    double tmax = 0.2;
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -141,9 +142,9 @@ int main() {
     int niter = ceil(tmax/dt);
 
     //Allocate Arrays
-    auto* u = (double*)malloc(2*nu*sizeof(double));
-    auto* u0 = (double*)malloc(2*nu*sizeof(double));
-    auto* dudt = (double*)malloc(2*nu*sizeof(double));
+    auto* u = (double*)malloc(nu*sizeof(double));
+    auto* u0 = (double*)malloc(nu*sizeof(double));
+    auto* dudt = (double*)malloc(nu*sizeof(double));
 
 
     //Generate Grid (currently uniform 2D) & initialize solution
@@ -165,10 +166,10 @@ int main() {
     //printf("elem:%d \t rho*u: %f\n", 99, u[iu3(99, 0, 1, tdegr)]);
 
     // Begin Time Marching (3 stage TVD RK)
-    auto* u_tmp = (double*)malloc(nu*sizeof(double));
+    //auto* u_tmp = (double*)malloc(nu*sizeof(double));
 
     for (int iter=0; iter<niter; iter++){
-        veccopy(u_tmp, u, nu);
+        //veccopy(u_tmp, u, nu);
         //1st stage
         CalcDudt(nelem, ndegr, nface, NVAR, inelfa, facpts, u, Dmatrix, Dradau, eldrdxi, eldxidr, eljac, dudt);
         for (int i=0; i<nu; i++){

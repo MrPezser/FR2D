@@ -18,11 +18,12 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
 
     //
     *inpoel = (int*)malloc(4*nelem*sizeof(int));
-    *inpofa = (int*)malloc(2*nface*sizeof(int));
+    //*inpofa = (int*)malloc(2*nface*sizeof(int));
     *inelfa = (int*)malloc(3*nface*sizeof(int));
 
 
     //loop through every element
+    ///Convention for boundar elements ielem=nelem at left-most bottom face, increases counterclockwise
     int iface;
     for (int j=0; j<jmx-1; j++){
         for (int i=0; i<imx-1; i++){
@@ -40,8 +41,8 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
 
             //Left Face
             iface = 2 * ielem;
-            (*inpofa)[iu(iface,0,nface)] = iu(i,j  ,imx);    //Bot Lef
-            (*inpofa)[iu(iface,1,nface)] = iu(i,j+1,imx);    //Top Lef
+            //(*inpofa)[iu(iface,0,nface)] = iu(i,j  ,imx);    //Bot Lef
+            //(*inpofa)[iu(iface,1,nface)] = iu(i,j+1,imx);    //Top Lef
 
             (*inelfa)[iu(iface,0,nface)] = ielem-1;    //elem left
             (*inelfa)[iu(iface,1,nface)] = ielem;      //elem right
@@ -52,20 +53,20 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
 
             //Bottom Face
             iface = 2 * ielem + 1;
-            (*inpofa)[iu(iface,0,nface)] = iu(i  ,j,imx);     //Bot Lef
-            (*inpofa)[iu(iface,1,nface)] = iu(i+1,j,imx);     //Bot Rig
+            //(*inpofa)[iu(iface,0,nface)] = iu(i  ,j,imx);     //Bot Lef
+            //(*inpofa)[iu(iface,1,nface)] = iu(i+1,j,imx);     //Bot Rig
 
             (*inelfa)[iu(iface,0,nface)] = ielem;              //elem left of face
             (*inelfa)[iu(iface,1,nface)] = ielem - (imx-1);    //elem right of face
             (*inelfa)[iu(iface,2,nface)] = 1; //Horizontal face
             if (j==0){ //boundary
-                (*inelfa)[iu(iface,1,nface)] = -1;
+                (*inelfa)[iu(iface,1,nface)] = -nelem + i;
             }
 
             if (i==imx-2){ //very far right
                 iface = 2*nelem + j;
-                (*inpofa)[iu(iface,0,nface)] = iu(i+1,j  ,imx);    //Bot Rig
-                (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);    //Top Rig
+                //(*inpofa)[iu(iface,0,nface)] = iu(i+1,j  ,imx);    //Bot Rig
+                //(*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);    //Top Rig
 
                 (*inelfa)[iu(iface,0,nface)] = ielem; //elem left of face
                 (*inelfa)[iu(iface,1,nface)] = -1;    //elem right of face
@@ -73,8 +74,8 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
             }
             if (j==jmx-2){ //very far top
                 iface = 2*nelem + jmx-1 + i;
-                (*inpofa)[iu(iface,0,nface)] = iu(i  ,j+1,imx);     //Top Lef
-                (*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);     //Top Rig
+                //(*inpofa)[iu(iface,0,nface)] = iu(i  ,j+1,imx);     //Top Lef
+                //(*inpofa)[iu(iface,1,nface)] = iu(i+1,j+1,imx);     //Top Rig
 
                 (*inelfa)[iu(iface,0,nface)] = -1;     //elem left of face
                 (*inelfa)[iu(iface,1,nface)] = ielem;  //elem right of face

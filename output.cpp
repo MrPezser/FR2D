@@ -37,42 +37,42 @@ void printscalar(const char *title, const char *varname, const char *varname2, c
     //x node
     for (int i = 0; i<npoin; i++) {
         fprintf(fout, "%lf, ", x[i]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 
     //y node
     for (int i = 0; i<npoin; i++) {
         fprintf(fout, "%lf,", y[i]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 
     //var 1
     for (int i = 0; i<nelem; i++) {
         fprintf(fout, "%lf, ", unkel[iu3(i, 0, 0, 1)]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 
     //var 2
     for (int i = 0; i<nelem; i++) {
         fprintf(fout, "%lf, ", unkel[iu3(i, 0, 1, 1)]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 
     //var 3
     for (int i = 0; i<nelem; i++) {
         fprintf(fout, "%lf, ", unkel[iu3(i, 0, 2, 1)]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 
     //var 4
     for (int i = 0; i<nelem; i++) {
         fprintf(fout, "%lf, ", unkel[iu3(i, 0, 3, 1)]);
-        //if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
+        if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
     fprintf(fout, "\n\n");
 

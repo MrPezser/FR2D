@@ -55,7 +55,7 @@ void EulerFlux(const double gam,const int dim, const double *u, double* flux){
         flux[0] = u[2];
         flux[1] = (u[2] * vx);
         flux[2] = (u[2] * vy) + p;
-        flux[3] = vx * (u[3] + p);
+        flux[3] = vy * (u[3] + p);
     }
 }
 
@@ -210,14 +210,14 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
         throw overflow_error("getting NAN mass flux!");
     }
 
-    vnL = nx*vxL + ny*vyL;
-    vnR = nx*vxR + ny*vyR;
+    //vnL = nx*vxL + ny*vyL;   ?? why these here again
+    //vnR = nx*vxR + ny*vyR;
 
     //Compute the positive fluxes (left of face)
     if (MnL > 1.0) {
         fPlus[0] = rhoL*vnL;
         fPlus[1] = rhoL*vnL*vxL + pL*nx;
-        fPlus[2] = rhoL*vnL*vxL + pL*ny;
+        fPlus[2] = rhoL*vnL*vyL + pL*ny;
         fPlus[3] = vnL*(uL[3] + pL);
     } else if (MnL < -1.0 ){
         fPlus[0] = 0;
@@ -241,13 +241,13 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
     } else if (MnR < -1.0 ){
         fMins[0] = rhoR*vnR;
         fMins[1] = rhoR*vnR*vxR + pR*nx;
-        fMins[2] = rhoR*vnR*vxR + pR*ny;
+        fMins[2] = rhoR*vnR*vyR + pR*ny;
         fMins[3] = vnR*(uR[3] + pR);
     } else {
         fMins[0] = F1R;
         fMins[1] = F1R * (vxR + nx*(-2*cR-vnR)/gam);
         fMins[2] = F1R * (vyR + ny*(-2*cR-vnR)/gam);
-        double A = ((gam-1) * vnR) - 2*cL;
+        double A = ((gam-1) * vnR) - 2*cR;
         fMins[3] = F1R * ( 0.5*(vxR*vxR + vyR*vyR - vnR*vnR) + A*A*0.5/(gam*gam - 1.0)) ;
     }
 

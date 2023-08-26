@@ -7,6 +7,7 @@
 
 #define MU (5e-4)
 
+
 void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                         const double* u, const double* Dradau, const int* inelfa, const int* facpts,\
                         const double* eldrdxi, const double* eldxidr, const double* eljac, double* fcorr_xi){
@@ -38,17 +39,16 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
 
         int facori = inelfa[iu(iface,2,nface)]; //Face Orientation
-        int offset, ind;
+        int ind;
         double dxdL, dydL, dxdR, dydR, JmagL, JmagR, ddxL, ddxR, ddyL, ddyR;
         double nvec[4];
 
         //Loop over the fact points
         for (int ifpt=0; ifpt<ndegr; ifpt++){
-            if (facori == 0){
-                //"Vertical" face - dxid() derivs
-                Lpoin = facpts[iu(ifpt, 0, ndegr)];
-                Rpoin = facpts[iu(ifpt, 1, ndegr)];
-
+            if (facori != 0){
+                //"Horizontal" face - detad() derivs
+                Lpoin = facpts[iu(ifpt, 2, ndegr)];
+                Rpoin = facpts[iu(ifpt, 3, ndegr)];
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + 0, nelem);
                 dxdL = eldrdxi[ind + 0];
@@ -63,10 +63,9 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                 ddyR = eldxidr[ind + 1];
 
             } else {
-                //"Horizontal" face - detad() derivs
-                Lpoin = facpts[iu(ifpt, 2, ndegr)];
-                Rpoin = facpts[iu(ifpt, 3, ndegr)];
-
+                //"Vertical" face - dxid() derivs
+                Lpoin = facpts[iu(ifpt, 0, ndegr)];
+                Rpoin = facpts[iu(ifpt, 1, ndegr)];
                 //Find the transform derivatives
                 ind = 2 * iu(Lelem, ifpt + ndegr, nelem);
                 dxdL = eldrdxi[ind + 0];
@@ -89,11 +88,11 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
             //direction of the left reference direction in the real plane
             double len = sqrt(dxdL*dxdL + dydL*dydL);
             nvec[0] = dxdL / len;
-            nvec[1] = dydL / len;
+            nvec[1] = -dydL / len;
             //dir of the Right element's reference lines
             len = sqrt(dxdR*dxdR + dydR*dydR);
             nvec[2] = dxdR / len;
-            nvec[3] = dydR / len;
+            nvec[3] = -dydR / len;
 
             //Calculate the flux in the respective grid directions
             FACEFLUX(&u[iu3(Lelem, Lpoin, 0, tdegr)], &u[iu3(Relem, Rpoin, 0, tdegr)], &nvec[0], &flux_comm_L[0]);
@@ -101,8 +100,8 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
             for (int kvar=0; kvar< NVAR; kvar++){
                 ///THIS IS PROBABLY WRONG AND I NEED TO CHANGE IT BUT I AM GOING TO SEE IF IT WORKS FOR THIS SIMPLIFIED CASE
-                flux_comm_L[kvar] *= 1.0 / (ddxL + ddyL);
-                flux_comm_R[kvar] *= 1.0 / (ddxR + ddyR);
+                flux_comm_L[kvar] *= 1.0/ sqrt(ddxL*ddxL + ddyL*ddyL);
+                flux_comm_R[kvar] *= 1.0/ sqrt(ddxR*ddxR + ddyR*ddyR);
             }
 
 
@@ -136,29 +135,21 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
                     //  Rpoin:  (xi=inode, eta=ifpt)
                     int Lpoin2, Rpoin2;
                     if (facori == 0) {
-                        Lpoin2 = iu(ndegr-1 - inode, ifpt, ndegr);
+                        Lpoin2 = iu(ndegr-1-inode, ifpt, ndegr);
                         Rpoin2 = iu(inode, ifpt, ndegr);
                     } else {
                         // Horizontal Face
                         Lpoin2 = iu(ifpt, inode, ndegr);
-                        Rpoin2 = iu(ifpt, ndegr-1 - inode, ndegr);
-                    }
-
-                    if ((local_L[kvar] - flux_comm_L[kvar]) != 0.0 || (local_R[kvar] - flux_comm_R[kvar]) != 0.0){
-                        //printf("wack\n");
+                        Rpoin2 = iu(ifpt, ndegr-1-inode, ndegr);
                     }
 
                     if (bcside == 0) {
-                        fcorr_xi[iu3(Lelem, Lpoin2, kvar, tdegr)] -=
-                                (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
-                        fcorr_xi[iu3(Relem, Rpoin2, kvar, tdegr)] +=
-                                (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
+                        fcorr_xi[iu3(Lelem, Lpoin2, kvar, tdegr)] += (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
+                        fcorr_xi[iu3(Relem, Rpoin2, kvar, tdegr)] -= (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
                     } else if (bcside == -1) {
-                        fcorr_xi[iu3(Relem, Rpoin2, kvar, tdegr)] +=
-                                (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
+                        fcorr_xi[iu3(Relem, Rpoin2, kvar, tdegr)] -= (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
                     } else {
-                        fcorr_xi[iu3(Lelem, Lpoin2, kvar, tdegr)] -=
-                                (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
+                        fcorr_xi[iu3(Lelem, Lpoin2, kvar, tdegr)] += (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
                     }
                 }
             }
@@ -184,19 +175,20 @@ void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const 
     //cell-internal components and calculating dudt
     for (int ielem=0; ielem<nelem; ielem++) {
         for (int inode = 0; inode < tdegr; inode++) {
-            double flux[2*NVAR];
+            double flux[NVAR];
             FLUX(0,&u[iu3(ielem, inode, 0, tdegr)], &flux[0]);
-            FLUX(1,&u[iu3(ielem, inode, 0, tdegr)], &flux[NVAR]);
-
             f_node[iu(inode, 0, tdegr)] = flux[0];
             f_node[iu(inode, 1, tdegr)] = flux[1];
             f_node[iu(inode, 2, tdegr)] = flux[2];
             f_node[iu(inode, 3, tdegr)] = flux[3];
 
-            g_node[iu(inode, 0, tdegr)] = flux[4];
-            g_node[iu(inode, 1, tdegr)] = flux[5];
-            g_node[iu(inode, 2, tdegr)] = flux[6];
-            g_node[iu(inode, 3, tdegr)] = flux[7];
+
+            FLUX(1,&u[iu3(ielem, inode, 0, tdegr)], &flux[0]);
+            g_node[iu(inode, 0, tdegr)] = flux[0];
+            g_node[iu(inode, 1, tdegr)] = flux[1];
+            g_node[iu(inode, 2, tdegr)] = flux[2];
+            g_node[iu(inode, 3, tdegr)] = flux[3];
+            ///make transformation to reference directions eta and xi instead of x and y
         }
 
         //compute discontinuous flux slope (in reference element of width 2x2)
@@ -217,12 +209,9 @@ void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const 
                         int hnode = iu(k,j,ndegr);
 
                         //Vertical
-                        ///make transformation to reference directions eta and xi in stead of x and y
                         fxi[kvar] += g_node[iu(vnode, kvar, tdegr)] * Dmatrix[iu(i, k, tdegr)];
                         //Horizontal
                         fxi[kvar] += f_node[iu(hnode, kvar, tdegr)] * Dmatrix[iu(j, k, tdegr)];
-
-                        //might need to remove duplicate?? maybe not    probably not
                     }
                 }
 
