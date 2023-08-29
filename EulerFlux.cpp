@@ -30,7 +30,7 @@ void getPrimativesPN(const double gam, const double *unkel, double *rho, double 
     p[0] = fmax(1e-8, p[0]);
 
     c[0] = sqrt(gam * p[0] / fmax(1e-8, rho[0]));
-    M[0] = sqrt(v2) / c[0]; ///=========== might need to sign this??? ================= (maybe not)
+    M[0] = sqrt(v2) / c[0]; ///=========== might need to sign this??? ================= (maybe not) [probably not]
 
     if (isnan(M[0])) {throw overflow_error("Nonpositive Density\n");}
 }
@@ -46,9 +46,9 @@ void EulerFlux(const double gam,const int dim, const double *u, double* flux){
 
     if (dim == 0) {
         //X flux component
-        flux[0] = u[1];
-        flux[1] = (u[1] * vx) + p;
-        flux[2] = (u[1] * vy);
+        flux[0] = u[1];             //rho*vx
+        flux[1] = (u[1] * vx) + p;  //rhovx^2 + p
+        flux[2] = (u[1] * vy);      //rhovx*vy
         flux[3] = vx * (u[3] + p);
     } else {
         // Y flux component

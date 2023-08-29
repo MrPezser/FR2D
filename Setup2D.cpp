@@ -87,11 +87,11 @@ void LoadStruct2Unstruct(const int imx, const int jmx, int nelem, int nface,
     }
 }
 
-void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const double* x_in, const double* y_in,\
+void CalcCoordJacobian(int ndegr, int npoin, int nelem, const int* inpoel, const double* x_in, const double* y_in,\
                        const double* xi, const double* eta, double* eldrdxi, double* eldxidr, double* eljac){
     /*Calculates the coordinate transformation matrix d(x,y)/d(xi,eta) for each column and row in each quad element
      *Input:
-     *  ndegr  - degrees of freedom per dimension of the cell
+     *  tdegr  - degrees of freedom per dimension of the cell
      *  npoin  - number of points
      *  inpoel - points corresponding to each element
      *  coords - x and y coordinated of point
@@ -112,7 +112,7 @@ void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const
     //On each element we need to figure out the slope of each (xi = const.) and (eta = const.) line.
 
     //Points indexed; ipoin = iu(i_xi, j_eta, ni)
-    int ndegr = order*order;
+    int tdegr = ndegr*ndegr;
 
     for (int ielem=0; ielem < nelem; ielem++){
         double x[4], y[4];
@@ -138,6 +138,7 @@ void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const
 
             double alpha = (xii + 1.0) * 0.5;
             double beta = (etai + 1.0) * 0.5;
+
 
             etamax_x = alpha * x[2] + (1.0 - alpha) * x[3]; //alpha going from TL corner to TR
             etamin_x = alpha * x[1] + (1.0 - alpha) * x[0]; //alpha going from BL corner to BR
@@ -183,9 +184,9 @@ void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const
             eldxidr[ind + 1] = detady;
 
         }
-        for (int i_xi=0; i_xi<order; i_xi++){
-            for (int j_eta=0; j_eta<order; j_eta++) {
-                ipoin = iu(i_xi, j_eta, order);
+        for (int i_xi=0; i_xi<ndegr; i_xi++){
+            for (int j_eta=0; j_eta<ndegr; j_eta++) {
+                ipoin = iu(i_xi, j_eta, ndegr);
 
                 //xi derivatives
                 int ind = 2 * iu(ielem, j_eta + 0, nelem);
@@ -214,29 +215,29 @@ void FacePoint2PointMap(int ndegr, int* facpts) {
 
     //Points indexed; ipoin = iu(i_xi, j_eta, ni)
     //Need interior points perpendicular from the face points
+    ///no no no no this is not it chief, found a better way to do it
 
     for (int i=0; i<ndegr; i++){
 
-        int id  = ndegr * iu(i, 0, ndegr);
-        int id2 = ndegr * iu(i, 1, ndegr);
-        int id3 = ndegr * iu(i, 2, ndegr);
-        int id4 = ndegr * iu(i, 3, ndegr);
-        for (int j=0; j<ndegr; j++){
-            //j=0 = xi_max set of points which will lie on the left side of the face
-            //j++ incrementing towards the interior until arriving at the other face
+        int id  = iu(i, 0, ndegr);//     0 + i
+        int id2 = iu(i, 1, ndegr);// ndegr + i
+        int id3 = iu(i, 2, ndegr);//2ndegr + i
+        int id4 = iu(i, 3, ndegr);//3ndegr + i
+        //j=0 = xi_max set of points which will lie on the left side of the face
+        //j++ incrementing towards the interior until arriving at the other face
+        ///wth am i talking about in that comment, j is marching along the face
 
-            //Vertical Face
-            //Left
-            facpts[id +j] = 0;//iu(ndegr-1-j, i, ndegr); // Left side of vertical face
-            //Right
-            facpts[id2+j] = iu(j        , i, ndegr); // Right side of vertical face
+        //Vertical Face
+        //Left
+        facpts[id] = iu(ndegr-1, i, ndegr); // Left side of vertical face
+        //Right
+        facpts[id2] = iu(0      , i, ndegr); // Right side of vertical face
 
-            //Horizontal Face
-            //Left|Top
-            facpts[id3+j] = iu(i, j        , ndegr);    // Left|Top  side of vertical face
-            //Right|Upper
-            facpts[id4+j] = iu(i, ndegr-1-j, ndegr);    // Right|Bot side of vertical face
-        }
+        //Horizontal Face
+        //Left|Top
+        facpts[id3] = iu(i, 0      , ndegr);    // Left|Top  side of vertical face
+        //Right|Upper
+        facpts[id4] = iu(i, ndegr-1, ndegr);    // Right|Bot side of vertical face
 
     }
 }

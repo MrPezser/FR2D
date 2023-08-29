@@ -43,13 +43,13 @@ double Initialize(double x){
 
 void InitializeEuler(double x, double y, double* u){
     double rho = 1.0;
-    double vx = 2.0;
-    double vy = 0.0;
+    double vx = 0.0;
+    double vy = 1.0;
     double p = 1.0;
 
-    //rho = Initialize(x);
+    rho = Initialize(y);
 
-      //shock problem
+    /*  //shock problem
     if (y < 0.5 && x < 0.5){
         //rho = 1.0;
         vx = 0.0;
@@ -60,7 +60,7 @@ void InitializeEuler(double x, double y, double* u){
         vx = 0.0;
         //vy = 0.0;
         p = 0.1;
-    }
+    }*/
 
     u[0] = rho;                             //rho
     u[1] = rho * vx;                        //rho Vx
@@ -72,8 +72,8 @@ void InitializeEuler(double x, double y, double* u){
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 501;
-    int jmx = 501;
+    int imx = 21;
+    int jmx = 21;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
     int nbfac = 2*(imx-1) + 2*(jmx-1);
@@ -84,9 +84,10 @@ int main() {
     //int nvar = NVAR;              //Number of variables
     int nu = (nelem + nbfac) * tdegr * NVAR;
 
-    double cfl = 0.1 / (ndegr*ndegr);          //CFL Number
+    double cfl = 0.1 / (tdegr);          //CFL Number
 
     double tmax = 0.2;
+    int niter = 10;
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -111,10 +112,8 @@ int main() {
     double dy = 1.0 / (double)(jmx-1);
 
 
-    //auto* x = (double*)malloc(npoin*sizeof(double));
-    //auto* y = (double*)malloc(npoin*sizeof(double));
-    double x[npoin];
-    double y[npoin];
+    auto* x = (double*)malloc(npoin*sizeof(double));
+    auto* y = (double*)malloc(npoin*sizeof(double));
 
     for (int j = 0; j < jmx; j++) {
         for (int i = 0; i < imx; i++) {
@@ -127,10 +126,10 @@ int main() {
 
     auto* eldrdxi = (double*)malloc(nelem*ndegr*4*sizeof(double));
     auto* eldxidr = (double*)malloc(nelem*ndegr*4*sizeof(double));
-    auto* eljac   = (double*)malloc(nelem*ndegr*ndegr*sizeof(double));
+    auto* eljac   = (double*)malloc(nelem*tdegr*sizeof(double));
     CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi, eldxidr, eljac);
 
-    auto* facpts = (int*)malloc(4*ndegr*sizeof(int));
+    auto* facpts = (int*)malloc(4*tdegr*sizeof(int));
     FacePoint2PointMap(ndegr,facpts);
 
     printgrid("Title", inpoel, nelem, npoin, x, y);
@@ -139,13 +138,14 @@ int main() {
     double dt = (cfl * fmin(dx, dy)); ///Remember to do this
 
     //Aprox number of iterations required to get to the given tmax
-    int niter = ceil(tmax/dt);
+    //int niter = ceil(tmax/dt);
 
     //Allocate Arrays
     auto* u = (double*)malloc(nu*sizeof(double));
     auto* u0 = (double*)malloc(nu*sizeof(double));
     auto* dudt = (double*)malloc(nu*sizeof(double));
 
+    int dummy = 0;
 
     //Generate Grid (currently uniform 2D) & initialize solution
     for (int ielem=0; ielem<nelem; ielem++){
@@ -157,6 +157,11 @@ int main() {
                 double xnode = x[ipoin] + (xi[k] + 1.0) * (0.5 * dx);  ///assuming cartesean grid
                 double ynode = y[ipoin] + (xi[j] + 1.0) * (0.5 * dy);
                 InitializeEuler(xnode, ynode, &u[iu3(ielem, jnode, 0, tdegr)]);
+                /*
+                if (ynode >  0.99-dy){
+                    dummy++;
+                }*/
+
             }
         }
     }
@@ -198,7 +203,7 @@ int main() {
 
     printf("iter=%d\tdt=%f\n", niter, dt);
 
-    printscalar("FV Output", "rho", "rho_u", "rho_v", "rho_e", inpoel, nelem, npoin, x, y, u);
+    printscalar("FV Output", "rho", "rho_u", "rho_v", "rho_e", ndegr, inpoel, nelem, npoin, x, y, u);
 
     /*
     //Printout Solution

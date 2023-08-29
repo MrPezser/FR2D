@@ -24,35 +24,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="de62fc38-5444-4bd6-a793-20054190a24d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/BoundaryConditions.cpp" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/BoundaryConditions.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/EulerFlux.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/EulerFlux.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Setup2D.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Setup2D.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/SpatialDiscretization.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/SpatialDiscretization.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/cmakeFiles-v1-ec6b326b88eb229fd592.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/codemodel-v2-189feddb6a3fa2aaff47.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/index-2023-08-24T21-41-54-0823.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/.cmake/api/v1/reply/target-FR2D-Debug-52d7e29f4ebba7ecf811.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_deps" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/.ninja_log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeCache.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/EulerFlux.cpp.obj" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/EulerFlux.cpp.obj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/Setup2D.cpp.obj" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/Setup2D.cpp.obj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/SpatialDiscretization.cpp.obj" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/SpatialDiscretization.cpp.obj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/main.cpp.obj" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/main.cpp.obj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/output.cpp.obj" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/FR2D.dir/output.cpp.obj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-Debug-log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/clion-Debug-log.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rules.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/CMakeFiles/rules.ninja" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/FR2D.exe" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/FR2D.exe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/Testing/Temporary/LastTest.log" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/cmake-build-debug/build.ninja" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/build.ninja" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/grid.tec" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/grid.tec" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/cmake-build-debug/plotP0.tec" beforeDir="false" afterPath="$PROJECT_DIR$/cmake-build-debug/plotP0.tec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/indexing.h" beforeDir="false" afterPath="$PROJECT_DIR$/indexing.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/output.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/output.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/output.h" beforeDir="false" afterPath="$PROJECT_DIR$/output.h" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -126,6 +114,8 @@
       <workItem from="1692985350383" duration="11143000" />
       <workItem from="1693006873325" duration="480000" />
       <workItem from="1693008031400" duration="341000" />
+      <workItem from="1693026078808" duration="5927000" />
+      <workItem from="1693254712723" duration="11381000" />
     </task>
     <servers />
   </component>
