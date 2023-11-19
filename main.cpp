@@ -43,24 +43,26 @@ double Initialize(double x){
 
 void InitializeEuler(double x, double y, double* u){
     double rho = 1.0;
-    double vx = 0.0;
-    double vy = 1.0;
+    double vx = 1.0;
+    double vy = 0.0;
     double p = 1.0;
 
-    rho = Initialize(y);
+    //x = (x + y) * 0.5;
 
-    /*  //shock problem
-    if (y < 0.5 && x < 0.5){
+    //rho = Initialize(x);
+
+      //shock problem
+    if (x < 0.5 && y < 0.5){
         //rho = 1.0;
         vx = 0.0;
         //vy = 0.0;
         //p = 1.0;
     } else {
-        rho = 0.125;
+        rho = 0.5;//0.125;
         vx = 0.0;
         //vy = 0.0;
         p = 0.1;
-    }*/
+    }
 
     u[0] = rho;                             //rho
     u[1] = rho * vx;                        //rho Vx
@@ -72,22 +74,21 @@ void InitializeEuler(double x, double y, double* u){
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 21;
-    int jmx = 21;
+    int imx = 101;
+    int jmx = 51;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
     int nbfac = 2*(imx-1) + 2*(jmx-1);
     int npoin = imx*jmx;
 
-    int ndegr = 1;             //Degrees of freedom per element in one dimension
+    int ndegr = 2;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
-    //int nvar = NVAR;              //Number of variables
     int nu = (nelem + nbfac) * tdegr * NVAR;
 
-    double cfl = 0.1 / (tdegr);          //CFL Number
+    double cfl = 0.1 / (tdegr*tdegr);          //CFL Number
 
     double tmax = 0.2;
-    int niter = 10;
+    //int niter = 20;
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -136,9 +137,10 @@ int main() {
 
     //This should be recalculated each time step
     double dt = (cfl * fmin(dx, dy)); ///Remember to do this
+    ///don't forget it
 
-    //Aprox number of iterations required to get to the given tmax
-    //int niter = ceil(tmax/dt);
+    //Aprox number of iterations required to get to the given tmax, or specified # for debugging
+    int niter = 70;//ceil(tmax/dt);
 
     //Allocate Arrays
     auto* u = (double*)malloc(nu*sizeof(double));
@@ -157,10 +159,7 @@ int main() {
                 double xnode = x[ipoin] + (xi[k] + 1.0) * (0.5 * dx);  ///assuming cartesean grid
                 double ynode = y[ipoin] + (xi[j] + 1.0) * (0.5 * dy);
                 InitializeEuler(xnode, ynode, &u[iu3(ielem, jnode, 0, tdegr)]);
-                /*
-                if (ynode >  0.99-dy){
-                    dummy++;
-                }*/
+                //printf("Ynode: %f\t Xnode: %f\t ielem: %d\t u: %f\n", xnode, ynode, ielem, u[iu3(ielem, jnode, 0, tdegr)]);
 
             }
         }

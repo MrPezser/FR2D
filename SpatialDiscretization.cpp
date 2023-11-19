@@ -143,6 +143,9 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
                     ASSERT(Lpoin2 < tdegr && Rpoin2 < tdegr, "you done messed up fam")
 
+                    if (kvar == 2 && (fabs(local_L[kvar] - flux_comm_L[kvar]) > 1e-5 || fabs(local_R[kvar] - flux_comm_R[kvar]) > 1e-5)) {
+                    //    printf("thar she blows");
+                    }
                     if (bcside == 0) {
                         fcorr_xi[iu3(Lelem, Lpoin2, kvar, tdegr)] += (local_L[kvar] - flux_comm_L[kvar]) * Dradau[inode];
                         fcorr_xi[iu3(Relem, Rpoin2, kvar, tdegr)] -= (local_R[kvar] - flux_comm_R[kvar]) * Dradau[inode];
@@ -230,6 +233,10 @@ void DiscontinuousFlux(const int nelem, const int ndegr, const double* u, const 
                         //Horizontal
                         fxi[kvar] += f_node[iu(hnode, kvar, tdegr)] * Dmatrix[iu(j, k, ndegr)];
                     }
+                }
+
+                if (fabs(fxi[2]) > 1e-50){
+                    //printf("Thar she blows!");
                 }
 
                 // add the interior contribution to the flux slope

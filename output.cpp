@@ -53,9 +53,17 @@ void printscalar(const char *title, const char *varname, const char *varname2, c
     }
     fprintf(fout, "\n\n");
 
+    double u;
+
     //var 1
     for (int i = 0; i<nelem; i++) {
-        double u = (1.0/4.0)*(unkel[iu3(i, 0, 0, tdegr)] + unkel[iu3(i, 1, 0, tdegr)] + unkel[iu3(i, 2, 0, tdegr)] + unkel[iu3(i, 3, 0, tdegr)]);
+        if (ndegr==2) {
+            u = (1.0 / 4.0) *
+                       (unkel[iu3(i, 0, 0, tdegr)] + unkel[iu3(i, 1, 0, tdegr)] + unkel[iu3(i, 2, 0, tdegr)] +
+                        unkel[iu3(i, 3, 0, tdegr)]);
+        } else {
+            u = unkel[iu3(i, 0, 0, tdegr)];
+        }
         fprintf(fout, "%lf, ", u); //unkel[iu3(i, 0, 0, tdegr)]);
         if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
@@ -63,7 +71,13 @@ void printscalar(const char *title, const char *varname, const char *varname2, c
 
     //var 2
     for (int i = 0; i<nelem; i++) {
-        double u = (1.0/4.0)*(unkel[iu3(i, 0, 1, tdegr)] + unkel[iu3(i, 1, 1, tdegr)] + unkel[iu3(i, 2, 1, tdegr)] + unkel[iu3(i, 3, 1, tdegr)]);
+        if (ndegr==2) {
+            u = (1.0 / 4.0) *
+                       (unkel[iu3(i, 0, 1, tdegr)] + unkel[iu3(i, 1, 1, tdegr)] + unkel[iu3(i, 2, 1, tdegr)] +
+                        unkel[iu3(i, 3, 1, tdegr)]);
+        } else {
+            u = unkel[iu3(i, 0, 1, tdegr)];
+        }
         fprintf(fout, "%lf, ", u);//unkel[iu3(i, 0, 1, tdegr)]);///unkel[iu3(i, 0, 1, tdegr)]);
         if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
@@ -71,7 +85,13 @@ void printscalar(const char *title, const char *varname, const char *varname2, c
 
     //var 3
     for (int i = 0; i<nelem; i++) {
-        double u = (1.0/4.0)*(unkel[iu3(i, 0, 2, tdegr)] + unkel[iu3(i, 1, 2, tdegr)] + unkel[iu3(i, 2, 2, tdegr)] + unkel[iu3(i, 3, 2, tdegr)]);
+        if (ndegr==2) {
+            u = (1.0 / 4.0) *
+                       (unkel[iu3(i, 0, 2, tdegr)] + unkel[iu3(i, 1, 2, tdegr)] + unkel[iu3(i, 2, 2, tdegr)] +
+                        unkel[iu3(i, 3, 2, tdegr)]);
+        } else {
+            u = unkel[iu3(i, 0, 2, tdegr)];
+        }
         fprintf(fout, "%lf, ", u);//unkel[iu3(i, 0, 2, tdegr)]);///unkel[iu3(i, 0, 2, tdegr)]);
         if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
@@ -79,7 +99,13 @@ void printscalar(const char *title, const char *varname, const char *varname2, c
 
     //var 4
     for (int i = 0; i<nelem; i++) {
-        double u = (1.0/4.0)*(unkel[iu3(i, 0, 3, tdegr)] + unkel[iu3(i, 1, 3, tdegr)] + unkel[iu3(i, 2, 3, tdegr)] + unkel[iu3(i, 3, 3, tdegr)]);
+        if (ndegr==2) {
+            u = (1.0 / 4.0) *
+                       (unkel[iu3(i, 0, 3, tdegr)] + unkel[iu3(i, 1, 3, tdegr)] + unkel[iu3(i, 2, 3, tdegr)] +
+                        unkel[iu3(i, 3, 3, tdegr)]);
+        } else {
+            u = unkel[iu3(i, 0, 3, tdegr)];
+        }
         fprintf(fout, "%lf, ", u);//unkel[iu3(i, 0, 3, tdegr)]);
         if ((i+1) % 200 == 0) {fprintf(fout,"\n");}
     }
