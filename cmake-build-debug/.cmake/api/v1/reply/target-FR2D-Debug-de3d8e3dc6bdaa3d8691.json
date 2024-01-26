@@ -41,7 +41,7 @@
 					"fragment" : "-g -fdiagnostics-color=always"
 				},
 				{
-					"fragment" : "-std=gnu++23"
+					"fragment" : "-std=gnu++1z"
 				}
 			],
 			"language" : "CXX",
@@ -60,7 +60,9 @@
 				3,
 				6,
 				8,
-				10
+				10,
+				12,
+				14
 			]
 		}
 	],
@@ -102,7 +104,9 @@
 				3,
 				6,
 				8,
-				10
+				10,
+				12,
+				14
 			]
 		},
 		{
@@ -114,7 +118,9 @@
 				5,
 				7,
 				9,
-				11
+				11,
+				13,
+				15
 			]
 		}
 	],
@@ -184,6 +190,28 @@
 		{
 			"backtrace" : 1,
 			"path" : "Setup2D.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "output.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "output.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "BoundaryConditions.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"path" : "BoundaryConditions.h",
 			"sourceGroupIndex" : 1
 		}
 	],

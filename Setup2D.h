@@ -7,11 +7,12 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include "indexing.h"
 
 void LoadStruct2Unstruct(int imx, int jmx, int nelem, int nface, int** inpoel, int** inpofa, int** inelfa);
-void CalcCoordJacobian(int ndegr, int npoin, int nelem, int* inpoel, double* x_in, double* y_in, double* xi,\
-                        double* eta, double* eldrdxi);
+void CalcCoordJacobian(int order, int npoin, int nelem, const int* inpoel, const double* x_in, const double* y_in,\
+                       const double* xi, const double* eta, double* eldrdxi, double* eldxidr, double* eljac);
 void FacePoint2PointMap(int ndegr, int* facpts);
 
 

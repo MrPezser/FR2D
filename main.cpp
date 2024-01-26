@@ -1,12 +1,13 @@
 #include <iostream>
 #include <cmath>
+#include <cstdlib>
 
 #include "indexing.h"
 #include "basis.h"
 #include "EulerFlux.h"
 #include "SpatialDiscretization.h"
 #include "Setup2D.h"
-
+#include "output.h"
 
 
 using namespace std;
@@ -20,7 +21,7 @@ void veccopy(double* a, const double* b, size_t n){
 double Initialize(double x){
     ///This defines the intial state of the solution space
 
-
+    /*
     //Gaussian bump and step combo
     if (x < 0.6) {
         double beta = 0.01;
@@ -31,53 +32,63 @@ double Initialize(double x){
         } else {
             return 1.0;
         }
-    }
+    }*/
+
+    //return x + 1.0;
 
     //return 2.0 + sin(2.0*M_PI*x);
 
-    //return 1.0 + exp(-40*(x-0.5)*(x-0.5));
+    return 1.0 + exp(-40*(x-0.5)*(x-0.5));
 }
 
 void InitializeEuler(double x, double y, double* u){
     double rho = 1.0;
-    double v = 1.0;
+    double vx = 1.0;
+    double vy = 0.0;
     double p = 1.0;
+
+    //x = (x + y) * 0.5;
 
     //rho = Initialize(x);
 
+      //shock problem
     if (x < 0.5 && y < 0.5){
         //rho = 1.0;
-        v = 0.0;
+        vx = 0.0;
+        //vy = 0.0;
         //p = 1.0;
     } else {
-        rho = 0.125;
-        v = 0.0;
+        rho = 0.5;//0.125;
+        vx = 0.0;
+        //vy = 0.0;
         p = 0.1;
     }
 
     u[0] = rho;                             //rho
-    u[1] = rho * v;                         //rho V
-    u[2] = 0.5*rho*v*v + (p/(GAM-1.0));       //rho e
+    u[1] = rho * vx;                        //rho Vx
+    u[2] = rho * vy;                        //rho Vy
+    double vmags = vx*vx + vy*vy;
+    u[3] = 0.5*rho*vmags + (p/(GAM-1.0));     //rho e
 }
 
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 10;
-    int jmx = 10;
+    int imx = 101;
+    int jmx = 51;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
+    int nbfac = 2*(imx-1) + 2*(jmx-1);
     int npoin = imx*jmx;
 
-    int ndegr = 4;             //Degrees of freedom per element in one dimension
+    int ndegr = 2;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
-    int nvar = 3;              //Number of variables
-    int nu = nelem * ndegr * nvar;
+    int nu = (nelem + nbfac) * tdegr * NVAR;
 
-    double cfl = 0.01 / (ndegr*ndegr);          //CFL Number
-    double a = 1.0;             //Wave Speed
+    double cfl = 0.1 / (tdegr*tdegr);          //CFL Number
 
     double tmax = 0.2;
+    //int niter = 20;
 
     //Find the solution points in one reference dimension
     auto* xi = (double*)malloc(ndegr*sizeof(double));
@@ -92,17 +103,19 @@ int main() {
     auto* Dradau = (double*)malloc((1+ndegr)*sizeof(double));
     GenerateRadauDerivatives(ndegr, xi, Dradau);
 
-
     //Setup for 2D based on a structured Quad grid (structure input, processing done unstructred)
     int *inpoel, *inpofa, *inelfa;
     LoadStruct2Unstruct(imx, jmx, nelem, nface, &inpoel, &inpofa, &inelfa);
 
+
     //test grid
-    double dx = 1.0 / (double)imx;
-    double dy = 1.0 / (double)jmx;
+    double dx = 1.0 / (double)(imx-1);
+    double dy = 1.0 / (double)(jmx-1);
+
 
     auto* x = (double*)malloc(npoin*sizeof(double));
     auto* y = (double*)malloc(npoin*sizeof(double));
+
     for (int j = 0; j < jmx; j++) {
         for (int i = 0; i < imx; i++) {
             int ipoin = iu(i,j,imx);
@@ -112,50 +125,57 @@ int main() {
         }
     }
 
-    double* eldrdxi;
-    CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi);
+    auto* eldrdxi = (double*)malloc(nelem*ndegr*4*sizeof(double));
+    auto* eldxidr = (double*)malloc(nelem*ndegr*4*sizeof(double));
+    auto* eljac   = (double*)malloc(nelem*tdegr*sizeof(double));
+    CalcCoordJacobian(ndegr, npoin, nelem, inpoel, x, y, xi, xi, eldrdxi, eldxidr, eljac);
 
-    int* facpts;
+    auto* facpts = (int*)malloc(4*tdegr*sizeof(int));
     FacePoint2PointMap(ndegr,facpts);
+
+    printgrid("Title", inpoel, nelem, npoin, x, y);
 
     //This should be recalculated each time step
     double dt = (cfl * fmin(dx, dy)); ///Remember to do this
+    ///don't forget it
 
-    //Aprox number of iterations required to get to the given tmax
-    int niter = ceil(tmax/dt);
+    //Aprox number of iterations required to get to the given tmax, or specified # for debugging
+    int niter = 70;//ceil(tmax/dt);
 
     //Allocate Arrays
     auto* u = (double*)malloc(nu*sizeof(double));
     auto* u0 = (double*)malloc(nu*sizeof(double));
     auto* dudt = (double*)malloc(nu*sizeof(double));
 
+    int dummy = 0;
 
     //Generate Grid (currently uniform 2D) & initialize solution
-    double dx = 1.0 / (double)imx;
-    double dy = 1.0 / (double)jmx;
-
-    for (int i=0; i<nelem; i++){
+    for (int ielem=0; ielem<nelem; ielem++){
         for (int j=0; j<ndegr; j++) {
             for (int k=0; k<ndegr; k++) {
-                //defining x & y position of cell centers
-                x[k] = (k+0.5) * dx;
-                y[j] = (j+0.5) * dy;
-
                 int jnode = iu(k,j,ndegr);
-                InitializeEuler(x[k] + xi[k] * (0.5 * dx), y[j] + xi[j] * (0.5 * dx), &u[iu3(i, jnode, 0, tdegr)]);
+                int ipoin = inpoel[iu(ielem, 0, nelem)]; //BL corner
+
+                double xnode = x[ipoin] + (xi[k] + 1.0) * (0.5 * dx);  ///assuming cartesean grid
+                double ynode = y[ipoin] + (xi[j] + 1.0) * (0.5 * dy);
+                InitializeEuler(xnode, ynode, &u[iu3(ielem, jnode, 0, tdegr)]);
+                //printf("Ynode: %f\t Xnode: %f\t ielem: %d\t u: %f\n", xnode, ynode, ielem, u[iu3(ielem, jnode, 0, tdegr)]);
+
             }
         }
     }
 
     veccopy(u0,u,nu);
 
+    //printf("elem:%d \t rho*u: %f\n", 99, u[iu3(99, 0, 1, tdegr)]);
+
     // Begin Time Marching (3 stage TVD RK)
-    auto* u_tmp = (double*)malloc(nu*sizeof(double));
+    //auto* u_tmp = (double*)malloc(nu*sizeof(double));
 
     for (int iter=0; iter<niter; iter++){
-        veccopy(u_tmp, u, nu);
+        //veccopy(u_tmp, u, nu);
         //1st stage
-        CalcDudt(nelem, ndegr, nface, nvar, dx, inelfa, facpts, u, Dmatrix, Dradau, dudt );
+        CalcDudt(nelem, ndegr, nface, NVAR, inelfa, facpts, u, Dmatrix, Dradau, eldrdxi, eldxidr, eljac, dudt);
         for (int i=0; i<nu; i++){
             //u_tmp[i] += dt * dudt[i];
             u[i] += dt * dudt[i];
@@ -177,12 +197,15 @@ int main() {
             u[i] = (1.0/3.0)*u[i] + (2.0/3.0)*(u_tmp[i] + dt*dudt[i]);
         }*/
 
-        if (iter % 100 == 0){printf("iter:%10d\t%7.2f%% Complete\n",iter, 100.0*(double)iter/(double)niter);}
+        if (iter % 10 == 0){printf("iter:%10d\t%7.2f%% Complete\n",iter, 100.0*(double)iter/(double)niter);}
     }
 
     printf("iter=%d\tdt=%f\n", niter, dt);
 
-    //Printout Final Solution
+    printscalar("FV Output", "rho", "rho_u", "rho_v", "rho_e", ndegr, inpoel, nelem, npoin, x, y, u);
+
+    /*
+    //Printout Solution
     FILE* fout = fopen("waveout.tec", "w");
     fprintf(fout, "x\tu\tu0\n");
 
@@ -199,12 +222,13 @@ int main() {
         }
     }
     fclose(fout);
+    */
 
-
+    /*
     free(xi);
     free(u);
     free(u0);
     free(dudt);
     free(Dmatrix);
-    free(Dradau);
+    free(Dradau); */
 }
