@@ -171,7 +171,7 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, double *flux){
+void LeerFlux(double gam, const double* uL, const double* uR, const double* nvec, double *flux){
     /*
      * gam - ratio of specific heats
      * uL - Left state variables
@@ -180,11 +180,11 @@ void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, do
      * flux - output common flux in the given direction
      */
     double F1L, F1R, fPlus[4], fMins[4], nx, ny;
-    double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL;
-    double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR;
+    double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL, vmagsL;
+    double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR, vmagsR;
 
-    nx = (1.0 - (double)nvec);
-    ny = (double)nvec;
+    nx = nvec[0];
+    ny = nvec[1];
 
     flux[0] = 0.0;
     flux[1] = 0.0;
@@ -198,9 +198,11 @@ void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, do
 
     vnL = nx*vxL + ny*vyL;
     MnL = vnL / cL;
+    vmagsL = vxL*vxL + vyL*vyL;
 
     vnR = nx*vxR + ny*vyR;
     MnR = vnR / cR;
+    vmagsR = vxR*vxR + vyR*vyR;
 
     F1L = F1pm(1, MnL, rhoL, cL);
     F1R = F1pm(0, MnR, rhoR, cR);
@@ -224,7 +226,8 @@ void LeerFlux(double gam, const double* uL, const double* uR, const int nvec, do
         fPlus[0] = F1L;
         fPlus[1] = F1L * (vxL + nx*(2*cL-vnL)/gam);
         fPlus[2] = F1L * (vyL + ny*(2*cL-vnL)/gam);
-        fPlus[3] = F1L * ()
+        double A = ((gam - 1) * vnL) + (2.0 * cL);
+        fPlus[3] = F1L * (0.5*(vmagsL - vnL*vnL) + A*A*0.5/(gam*gam-1) );
     }
 
     double A = ((gam - 1) * vL) + (2.0 * cL); //vL
