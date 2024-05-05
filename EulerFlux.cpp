@@ -30,12 +30,12 @@ void getPrimativesPN(const double gam, const double *unkel, double *rho, double 
     p[0] = fmax(1e-8, p[0]);
 
     c[0] = sqrt(gam * p[0] / fmax(1e-8, rho[0]));
-    M[0] = sqrt(v2) / c[0]; ///=========== might need to sign this??? ================= (maybe not) [probably not]
+    M[0] = sqrt(v2) / c[0]; ///=========== might need to sign this??? ================= (maybe not)
 
     if (isnan(M[0])) {throw overflow_error("Nonpositive Density\n");}
 }
 
-void EulerFlux(const double gam,const int dim, const double *u, double* flux){
+void EulerFlux(const int dim, const double gam, const double *u, double* flux){
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
@@ -46,20 +46,19 @@ void EulerFlux(const double gam,const int dim, const double *u, double* flux){
 
     if (dim == 0) {
         //X flux component
-        flux[0] = u[1];             //rho*vx
-        flux[1] = (u[1] * vx) + p;  //rhovx^2 + p
-        flux[2] = (u[1] * vy);      //rhovx*vy
+        flux[0] = u[1];
+        flux[1] = (u[1] * vx) + p;
+        flux[2] = (u[1] * vy);
         flux[3] = vx * (u[3] + p);
     } else {
         // Y flux component
         flux[0] = u[2];
         flux[1] = (u[2] * vx);
         flux[2] = (u[2] * vy) + p;
-        flux[3] = vy * (u[3] + p);
+        flux[3] = vx * (u[3] + p);
     }
 }
 
-/*
 void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     /// NOT UPDATED FOR 2D
     double rhoL, vL, pL, cL, ML;
@@ -122,10 +121,10 @@ void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     e3[2] = coeff * (h0 - (v*c));
 
     //Calculate left and right flux states
-    //auto*fluxLeft = (double*)malloc(3*sizeof(double));
-    //auto*fluxRight = (double*)malloc(3*sizeof(double));
-    //EulerFlux(gam, uL, fluxLeft);
-    //EulerFlux(gam, uR, fluxRight);
+    /*auto*fluxLeft = (double*)malloc(3*sizeof(double));
+    auto*fluxRight = (double*)malloc(3*sizeof(double));
+    EulerFlux(gam, uL, fluxLeft);
+    EulerFlux(gam, uR, fluxRight);*/
     double fluxLeft[3], fluxRight[3];
     fluxLeft[0]  = uL[1];
     fluxRight[0] = uR[1];
@@ -143,7 +142,7 @@ void RoeFDS(double gam, const double* uL, const double *uR, double* roeFlux){
     roeFlux[1] = 0.5 * (fluxRight[1] + fluxLeft[1] - (e1[1]*phi[0]*dw1) - (e2[1]*phi[1]*dw2) - (e3[1]*phi[2]*dw3));
     roeFlux[2] = 0.5 * (fluxRight[2] + fluxLeft[2] - (e1[2]*phi[0]*dw1) - (e2[2]*phi[1]*dw2) - (e3[2]*phi[2]*dw3));
 
-} */
+}
 
 double F1pm(const int isPlus, const double M, const double rho, const double c){
 
@@ -172,7 +171,7 @@ double F1pm(const int isPlus, const double M, const double rho, const double c){
     return NAN;
 }
 
-void LeerFlux(const double gam, const double* uL, const double* uR, const double* nvec, double *flux){
+void LeerFlux(double gam, const double* uL, const double* uR, const double* nvec, double *flux){
     /*
      * gam - ratio of specific heats
      * uL - Left state variables
@@ -181,8 +180,8 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
      * flux - output common flux in the given direction
      */
     double F1L, F1R, fPlus[4], fMins[4], nx, ny;
-    double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL;
-    double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR;
+    double rhoL, vxL, vyL, pL, cL, ML, vnL, MnL, vmagsL;
+    double rhoR, vxR, vyR, pR, cR, MR, vnR, MnR, vmagsR;
 
     nx = nvec[0];
     ny = nvec[1];
@@ -190,7 +189,7 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
     flux[0] = 0.0;
     flux[1] = 0.0;
     flux[2] = 0.0;
-    flux[3] = 0.0;
+    flux[4] = 0.0;
 
     getPrimativesPN(gam, uL, &rhoL, &vxL, &vyL, &pL, &cL, &ML);
     getPrimativesPN(gam, uR, &rhoR, &vxR, &vyR, &pR, &cR, &MR);
@@ -199,9 +198,11 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
 
     vnL = nx*vxL + ny*vyL;
     MnL = vnL / cL;
+    vmagsL = vxL*vxL + vyL*vyL;
 
     vnR = nx*vxR + ny*vyR;
     MnR = vnR / cR;
+    vmagsR = vxR*vxR + vyR*vyR;
 
     F1L = F1pm(1, MnL, rhoL, cL);
     F1R = F1pm(0, MnR, rhoR, cR);
@@ -210,14 +211,11 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
         throw overflow_error("getting NAN mass flux!");
     }
 
-    //vnL = nx*vxL + ny*vyL;   ?? why these here again
-    //vnR = nx*vxR + ny*vyR;
-
     //Compute the positive fluxes (left of face)
     if (MnL > 1.0) {
         fPlus[0] = rhoL*vnL;
         fPlus[1] = rhoL*vnL*vxL + pL*nx;
-        fPlus[2] = rhoL*vnL*vyL + pL*ny;
+        fPlus[2] = rhoL*vnL*vxL + pL*ny;
         fPlus[3] = vnL*(uL[3] + pL);
     } else if (MnL < -1.0 ){
         fPlus[0] = 0;
@@ -228,34 +226,22 @@ void LeerFlux(const double gam, const double* uL, const double* uR, const double
         fPlus[0] = F1L;
         fPlus[1] = F1L * (vxL + nx*(2*cL-vnL)/gam);
         fPlus[2] = F1L * (vyL + ny*(2*cL-vnL)/gam);
-        double A = ((gam-1) * vnL) + 2*cL;
-        fPlus[3] = F1L * ( 0.5*(vxL*vxL + vyL*vyL - vnL*vnL) + A*A*0.5/(gam*gam - 1.0)) ;
+        double A = ((gam - 1) * vnL) + (2.0 * cL);
+        fPlus[3] = F1L * (0.5*(vmagsL - vnL*vnL) + A*A*0.5/(gam*gam-1) );
     }
 
-    //Compute the negative fluxes (right of face)
-    if (MnR > 1.0) {
-        fMins[0] = 0;
-        fMins[1] = 0;
-        fMins[2] = 0;
-        fMins[3] = 0;
-    } else if (MnR < -1.0 ){
-        fMins[0] = rhoR*vnR;
-        fMins[1] = rhoR*vnR*vxR + pR*nx;
-        fMins[2] = rhoR*vnR*vyR + pR*ny;
-        fMins[3] = vnR*(uR[3] + pR);
-    } else {
-        fMins[0] = F1R;
-        fMins[1] = F1R * (vxR + nx*(-2*cR-vnR)/gam);
-        fMins[2] = F1R * (vyR + ny*(-2*cR-vnR)/gam);
-        double A = ((gam-1) * vnR) - 2*cR;
-        fMins[3] = F1R * ( 0.5*(vxR*vxR + vyR*vyR - vnR*vnR) + A*A*0.5/(gam*gam - 1.0)) ;
-    }
+    double A = ((gam - 1) * vL) + (2.0 * cL); //vL
+    fPlus[1] = F1L * A / gam;
+    fPlus[2] = F1L * A * A * 0.5 / (gam * gam - 1.0);
+
+
+    fMins[0] = F1R;
+    A = -((gam - 1) * vL) - (2.0 * cR); //vR
+    fMins[1] = F1R * A / gam;
+    fMins[2] = F1R * A*A * 0.5 / (gam*gam - 1.0);
 
 
     flux[0] = fPlus[0] + fMins[0];
     flux[1] = fPlus[1] + fMins[1];
     flux[2] = fPlus[2] + fMins[2];
-    flux[3] = fPlus[3] + fMins[3];
-
-    ASSERT(!_isnan(flux[0]) && !_isnan(flux[1]) && !_isnan(flux[2]) && !_isnan(flux[3]), "NAN split flux")
 }
