@@ -53,14 +53,14 @@ void InitializeEuler(double x, double y, double* u){
 
       //shock problem
     if (x < 0.5 && y < 0.5){
-        //rho = 1.0;
+        rho = 1.0;
         vx = 0.0;
-        //vy = 0.0;
+        vy = 0.0;
         //p = 1.0;
     } else {
-        rho = 0.5;//0.125;
+        rho = 0.125;
         vx = 0.0;
-        //vy = 0.0;
+        vy = 0.0;
         p = 0.1;
     }
 
@@ -74,14 +74,14 @@ void InitializeEuler(double x, double y, double* u){
 int main() {
     ///hardcoded inputs
     //Input grid informaiton
-    int imx = 101;
+    int imx = 201;
     int jmx = 51;
     int nelem = (imx-1) * (jmx-1);
     int nface = (2*nelem + (imx-1) + (jmx-1));
     int nbfac = 2*(imx-1) + 2*(jmx-1);
     int npoin = imx*jmx;
 
-    int ndegr = 2;             //Degrees of freedom per element in one dimension
+    int ndegr = 1;             //Degrees of freedom per element in one dimension
     int tdegr = ndegr*ndegr;   //Total degrees of freedom per element
     int nu = (nelem + nbfac) * tdegr * NVAR;
 
@@ -140,7 +140,7 @@ int main() {
     ///don't forget it
 
     //Aprox number of iterations required to get to the given tmax, or specified # for debugging
-    int niter = 70;//ceil(tmax/dt);
+    int niter = ceil(tmax/dt);
 
     //Allocate Arrays
     auto* u = (double*)malloc(nu*sizeof(double));

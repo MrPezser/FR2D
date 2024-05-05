@@ -41,7 +41,7 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
         //Loop over the fact points
         for (int ifpt=0; ifpt<ndegr; ifpt++){
-            if (facori != 0){
+            if (facori == 0){
                 //"Horizontal" face - detad() derivs
                 Lpoin = facpts[iu(ifpt, 2, ndegr)];
                 Rpoin = facpts[iu(ifpt, 3, ndegr)];
@@ -82,13 +82,13 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
 
             //direction of the left reference direction in the real plane
-            double len = sqrt(dxdL*dxdL + dydL*dydL);
-            nvec[0] = dxdL / len;
-            nvec[1] = dydL / len;
+            double lenL = sqrt(dxdL*dxdL + dydL*dydL);
+            nvec[0] = dxdL / lenL;
+            nvec[1] = -dydL / lenL;
             //dir of the Right element's reference lines
-            len = sqrt(dxdR*dxdR + dydR*dydR);
-            nvec[2] = dxdR / len;
-            nvec[3] = dydR / len;
+            double lenR = sqrt(dxdR*dxdR + dydR*dydR);
+            nvec[2] = dxdR / lenR;
+            nvec[3] = -dydR / lenR;
 
 
 
@@ -96,10 +96,11 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
             FACEFLUX(&u[iu3(Lelem, Lpoin, 0, tdegr)], &u[iu3(Relem, Rpoin, 0, tdegr)], &nvec[0], &flux_comm_L[0]);
             FACEFLUX(&u[iu3(Lelem, Lpoin, 0, tdegr)], &u[iu3(Relem, Rpoin, 0, tdegr)], &nvec[2], &flux_comm_R[0]);
 
+
             for (int kvar=0; kvar< NVAR; kvar++){
                 ///THIS IS PROBABLY WRONG AND I NEED TO CHANGE IT BUT I AM GOING TO SEE IF IT WORKS FOR THIS SIMPLIFIED CASE
-                flux_comm_L[kvar] *= sqrt(dxdL*dxdL + dydL*dydL);
-                flux_comm_R[kvar] *= sqrt(dxdR*dxdR + dydR*dydR);
+                flux_comm_L[kvar] *= lenL;//sqrt(dxdL*dxdL + dydL*dydL);
+                flux_comm_R[kvar] *= lenR;//sqrt(dxdR*dxdR + dydR*dydR);
             }
 
 
@@ -112,8 +113,9 @@ void FluxFaceCorrection(const int nface, const int ndegr, const int nelem,\
 
             //Rotate the Local Fluxes to be in line with the reference directions
             for (int ivar=0; ivar<NVAR; ivar++){
-                local_L[ivar] = JmagL * (ddxL*fL[ivar] + ddyL*gL[ivar]);
-                local_R[ivar] = JmagR * (ddxR*fR[ivar] + ddyR*gR[ivar]);
+                ///please forgive these horrendous sins.... and fix them before moving away from orthogonal mesh
+                local_L[ivar] = (ddxL*fL[ivar] + ddyL*gL[ivar]) / ();
+                local_R[ivar] = (ddxR*fR[ivar] + ddyR*gR[ivar]);
 
                 ASSERT(!_isnan(local_L[ivar]) && !_isnan(local_R[ivar]), "NAN local face fluxes")
             }
@@ -267,7 +269,7 @@ void CalcDudt(const int nelem, const int ndegr, const int nface, const int nvar,
         fcorr_xi[i] = 0.0;
     }
 
-    ///Need Boundary Conditions!!! (currently neumann = 0 everywhere)
+    ///Need Boundary Conditions!!! (currently homog neumann everywhere)
 
     //Flux Reconstruction (P_ndegr)
     FluxFaceCorrection(nface, ndegr, nelem, u, Dradau, inelfa, facpts, eldrdxi, eldxidr, eljac, fcorr_xi);
@@ -282,6 +284,8 @@ void CalcDudt(const int nelem, const int ndegr, const int nface, const int nvar,
                     double Jacobi = eljac[iu(ielem, inode, nelem)]; //coordinate transform jacobian
                     dudt[iu3(ielem, inode, kvar, tdegr)] = -(1 / Jacobi) * (fcorr_xi[iu3(ielem, inode, kvar, tdegr)]);\
                     //throw std::overflow_error("dude you forgot to delete this error\n");
+
+                    ///Looking at this for the first time in a while, shouldn't this be a matrix operation???
 
                     if (_isnan(dudt[iu3(ielem, inode, kvar, tdegr)])) {
                         throw std::overflow_error("try again loser\n dudt NAN\n");
